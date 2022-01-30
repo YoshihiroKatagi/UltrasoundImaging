@@ -2,7 +2,7 @@ import cv2
 from datetime import datetime
 
 date = datetime.now().strftime("%Y%m%d_%H%M%S")
-save_path = "Img/" + date + ".mp4"
+save_path = "Img/BeforeProcessing/" + date + ".mp4"
 time = 10
 
 cap = cv2.VideoCapture(0)
