@@ -26,15 +26,15 @@ lk_params = dict(winSize=(60,60),     # オプティカルフローの推定の�
                  criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.01))       # 探索アルゴリズムの終了条件
 
 # #properties
-# height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-# width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-# size = (width, height)
-# frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-# frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+size = (width, height)
+frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 
 # # for save
-# fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-# save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
+fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
 
 # 最初のフレームを取得してグレースケール変換
 ret, frame = cap.read()
@@ -75,6 +75,9 @@ while(cap.isOpened()):
 
   # ウィンドウに表示
   cv2.imshow('mask', img)
+  
+  # save per frame
+  save.write(img)
 
   # 次のフレーム、ポイントの準備
   frame_pre = frame_now.copy() # 次のフレームを最初のフレームに設定
@@ -87,3 +90,4 @@ while(cap.isOpened()):
 # 終了処理
 cv2.destroyAllWindows()
 cap.release()
+save.release()
