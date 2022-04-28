@@ -9,13 +9,14 @@ target_path = "Img/BeforeProcessing/" + target + ".mp4"
 
 date = datetime.now().strftime("%Y%m%d_%H%M%S")
 save_path = "Img/AfterProcessing/" + date + ".mp4"
+
 #########################################
 
 ############## Optical Flow #############
 cap = cv2.VideoCapture(target_path)
 
 # Shi-Tomasi法のパラメータ（コーナー：物体の角を特徴点として検出）
-ft_params = dict(maxCorners=20,       # 特徴点の最大数
+ft_params = dict(maxCorners=50,       # 特徴点の最大数
                  qualityLevel=0.3,    # 特徴点を選択するしきい値で、高いほど特徴点は厳選されて減る。
                  minDistance=30,       # 特徴点間の最小距離
                  blockSize=10)         # 特徴点の計算に使うブロック（周辺領域）サイズ
@@ -33,8 +34,11 @@ frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 
 # # for save
-fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
+# fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+# save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
+
+#教師データ
+# ml_data = np.zeros(2)
 
 # 最初のフレームを取得してグレースケール変換
 ret, frame = cap.read()
@@ -46,10 +50,19 @@ feature_pre = cv2.goodFeaturesToTrack(frame_pre, mask=None, **ft_params)
 # mask用の配列を生成
 mask = np.zeros_like(frame)
 
+# 全区間の全特徴量のベクトル
+# vector_all = np.array([])
+vector_all = []
+
+j = 0
 # 動画終了まで繰り返し
 while(cap.isOpened()):
+  # print(j)
+  j += 1
   # 次のフレームを取得し、グレースケールに変換
   ret, frame = cap.read()
+  if ret == False:
+    break
   frame_now = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
   # Lucas-Kanade法でフレーム間の特徴点のオプティカルフローを計算
@@ -59,10 +72,22 @@ while(cap.isOpened()):
   good1 = feature_pre[status == 1] # 1フレーム目
   good2 = feature_now[status == 1] # 2フレーム目
 
+  # ある時刻における全特徴点のベクトル
+  # vector_t = np.array([])
+  vector_t = []
+
   # 特徴点とオプティカルフローをフレーム・マスクに描画
   for i, (pt1, pt2) in enumerate(zip(good1, good2)):
+    # print(i)
     x1, y1 = pt1.ravel() # 1フレーム目の特徴点座標
     x2, y2 = pt2.ravel() # 2フレーム目の特徴点座標
+
+    # ある時刻におけるある特徴点のベクトル
+    # vector_i = np.array([x2 - x1, y2 - y1])
+    vector_i = [x2 - x1, y2 - y1]
+    # print(vector_i)
+    # vector_t = np.append(vector_t, vector_i, axis=0)
+    vector_t.append(vector_i)
 
     # 軌跡を描画（過去の軌跡も残すためにmaskに描く）
     mask = cv2.line(mask, (int(x1), int(y1)), (int(x2), int(y2)), [0, 0, 200], 2)
@@ -75,9 +100,15 @@ while(cap.isOpened()):
 
   # ウィンドウに表示
   cv2.imshow('mask', img)
+
+  # ある時刻のベクトル保存
+  # print(vector_t)
+  # print("vector_t length: " + str(len(vector_t)))
+  # vector_all = np.append(vector_all, vector_t, axis=0)
+  vector_all.append(vector_t)
   
   # save per frame
-  save.write(img)
+  # save.write(img)
 
   # 次のフレーム、ポイントの準備
   frame_pre = frame_now.copy() # 次のフレームを最初のフレームに設定
@@ -90,4 +121,7 @@ while(cap.isOpened()):
 # 終了処理
 cv2.destroyAllWindows()
 cap.release()
-save.release()
+# save.release()
+
+# print(vector_all)
+print("vector_all length: " + str(len(vector_all)))
