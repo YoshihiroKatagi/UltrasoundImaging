@@ -16,10 +16,10 @@ save_path = "Img/AfterProcessing/" + date + ".mp4"
 cap = cv2.VideoCapture(target_path)
 
 # Shi-Tomasi法のパラメータ（コーナー：物体の角を特徴点として検出）
-ft_params = dict(maxCorners=50,       # 特徴点の最大数
-                 qualityLevel=0.3,    # 特徴点を選択するしきい値で、高いほど特徴点は厳選されて減る。
-                 minDistance=30,       # 特徴点間の最小距離
-                 blockSize=10)         # 特徴点の計算に使うブロック（周辺領域）サイズ
+ft_params = dict(maxCorners=30,       # 特徴点の最大数
+                 qualityLevel=0.2,    # 特徴点を選択するしきい値で、高いほど特徴点は厳選されて減る。
+                 minDistance=15,       # 特徴点間の最小距離
+                 blockSize=15)         # 特徴点の計算に使うブロック（周辺領域）サイズ
 
 # Lucal-Kanade法のパラメータ（追跡用）
 lk_params = dict(winSize=(60,60),     # オプティカルフローの推定の計算に使う周辺領域サイズ
@@ -44,8 +44,18 @@ frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 ret, frame = cap.read()
 frame_pre = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+# 見切れ対策（最初の特徴点をトリミングした範囲内から抽出）
+trim_w = 80
+trim_h = 100
+frame_pre_first = frame_pre[trim_h : height - trim_h, trim_w : width - trim_w]
+
 # Shi-Tomasi法で特徴点の検出
-feature_pre = cv2.goodFeaturesToTrack(frame_pre, mask=None, **ft_params)
+# feature_pre = cv2.goodFeaturesToTrack(frame_pre, mask=None, **ft_params)
+feature_pre = cv2.goodFeaturesToTrack(frame_pre_first, mask=None, **ft_params)
+
+for v in feature_pre:
+  v[0][0] += trim_w
+  v[0][1] += trim_h
 
 # mask用の配列を生成
 mask = np.zeros_like(frame)
@@ -69,8 +79,17 @@ while(cap.isOpened()):
   feature_now, status, err = cv2.calcOpticalFlowPyrLK(frame_pre, frame_now, feature_pre, None, **lk_params)
 
   # オプティカルフローを検出した特徴点を取得
+  # print(str(j) + "回目")
   good1 = feature_pre[status == 1] # 1フレーム目
   good2 = feature_now[status == 1] # 2フレーム目
+  # print("featrue_now: ")
+  # print(feature_now)
+  # print("\ngood2:")
+  # print(good2)
+  # print('\n\n\n')
+  
+  # if j == 3:
+  #   break
 
   # ある時刻における全特徴点のベクトル
   # vector_t = np.array([])
@@ -103,7 +122,7 @@ while(cap.isOpened()):
 
   # ある時刻のベクトル保存
   # print(vector_t)
-  # print("vector_t length: " + str(len(vector_t)))
+  print("vector_t length: " + str(len(vector_t)))
   # vector_all = np.append(vector_all, vector_t, axis=0)
   vector_all.append(vector_t)
   
