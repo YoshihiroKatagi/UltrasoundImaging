@@ -61,14 +61,11 @@ for v in feature_pre:
 mask = np.zeros_like(frame)
 
 # 全区間の全特徴量のベクトル
-# vector_all = np.array([])
-vector_all = []
+vector_all = np.empty(0)
 
-j = 0
 # 動画終了まで繰り返し
 while(cap.isOpened()):
-  # print(j)
-  j += 1
+  
   # 次のフレームを取得し、グレースケールに変換
   ret, frame = cap.read()
   if ret == False:
@@ -79,37 +76,24 @@ while(cap.isOpened()):
   feature_now, status, err = cv2.calcOpticalFlowPyrLK(frame_pre, frame_now, feature_pre, None, **lk_params)
 
   # オプティカルフローを検出した特徴点を取得
-  # print(str(j) + "回目")
   good1 = feature_pre[status == 1] # 1フレーム目
   good2 = feature_now[status == 1] # 2フレーム目
-  # print("featrue_now: ")
-  # print(feature_now)
-  # print("\ngood2:")
-  # print(good2)
-  # print('\n\n\n')
-  
-  # if j == 3:
-  #   break
 
-  # ある時刻における全特徴点のベクトル
-  # vector_t = np.array([])
-  vector_t = []
+  feature_num = good1.shape[0]
+
+  # ある時刻のベクトルを導出
+  if good1.shape == good2.shape:
+    vector_t = good2 - good1
+    vector_all = np.append(vector_all, vector_t)
+
 
   # 特徴点とオプティカルフローをフレーム・マスクに描画
   for i, (pt1, pt2) in enumerate(zip(good1, good2)):
-    # print(i)
     x1, y1 = pt1.ravel() # 1フレーム目の特徴点座標
     x2, y2 = pt2.ravel() # 2フレーム目の特徴点座標
 
-    # ある時刻におけるある特徴点のベクトル
-    # vector_i = np.array([x2 - x1, y2 - y1])
-    vector_i = [x2 - x1, y2 - y1]
-    # print(vector_i)
-    # vector_t = np.append(vector_t, vector_i, axis=0)
-    vector_t.append(vector_i)
-
     # 軌跡を描画（過去の軌跡も残すためにmaskに描く）
-    mask = cv2.line(mask, (int(x1), int(y1)), (int(x2), int(y2)), [0, 0, 200], 2)
+    mask = cv2.line(mask, (int(x1), int(y1)), (int(x2), int(y2)), [0, 0, 200], 1)
 
     # 現フレームにオプティカルフローを描画
     frame = cv2.circle(frame, (int(x2), int(y2)), 5, [0, 0, 200], -1)
@@ -119,12 +103,6 @@ while(cap.isOpened()):
 
   # ウィンドウに表示
   cv2.imshow('mask', img)
-
-  # ある時刻のベクトル保存
-  # print(vector_t)
-  print("vector_t length: " + str(len(vector_t)))
-  # vector_all = np.append(vector_all, vector_t, axis=0)
-  vector_all.append(vector_t)
   
   # save per frame
   # save.write(img)
@@ -142,5 +120,6 @@ cv2.destroyAllWindows()
 cap.release()
 # save.release()
 
-# print(vector_all)
-print("vector_all length: " + str(len(vector_all)))
+vector_all = vector_all.reshape(-1, feature_num, 2)
+print(vector_all)
+print(vector_all.shape)
