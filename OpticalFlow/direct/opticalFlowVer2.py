@@ -9,6 +9,7 @@ target_path = "Img/BeforeProcessing/" + target + ".mp4"
 
 date = datetime.now().strftime("%Y%m%d_%H%M%S")
 save_path = "Img/AfterProcessing/" + date + ".mp4"
+vector_save_path = "Dataset/" + date
 
 #########################################
 
@@ -36,9 +37,6 @@ frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 # # for save
 # fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 # save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
-
-#教師データ
-# ml_data = np.zeros(2)
 
 # 最初のフレームを取得してグレースケール変換
 ret, frame = cap.read()
@@ -104,7 +102,7 @@ while(cap.isOpened()):
   # ウィンドウに表示
   cv2.imshow('mask', img)
   
-  # save per frame
+  # # save per frame
   # save.write(img)
 
   # 次のフレーム、ポイントの準備
@@ -121,5 +119,5 @@ cap.release()
 # save.release()
 
 vector_all = vector_all.reshape(-1, feature_num, 2)
-print(vector_all)
 print(vector_all.shape)
+# np.save(vector_save_path, vector_all)
