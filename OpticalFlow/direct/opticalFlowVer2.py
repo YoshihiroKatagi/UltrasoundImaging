@@ -1,15 +1,25 @@
 import cv2
+import os
 import numpy as np
 from datetime import datetime
 
 ############### ファイル #################
-#該当ファイルの日時
-target = "20211217_112231"
-target_path = "Img/BeforeProcessing/" + target + ".mp4"
+# 該当フォルダの日付（計測日と異なる場合は手入力）
+target_date = datetime.now().strftime("%Y-%m-%d")
+# target_date = "2022-05-13"
 
-date = datetime.now().strftime("%Y%m%d_%H%M%S")
-save_path = "Img/AfterProcessing/" + date + ".mp4"
-vector_save_path = "Dataset/" + date
+# 該当ファイルの時刻を手入力
+target_time = "13-11-05"
+
+target_directry = "dataset/" + target_date + "/ultrasoundImage"
+target_path = target_directry + "/before/" + target_time + ".mp4"
+
+save_path = target_directry + "/after/" + target_time + ".mp4"
+
+forML_folder = "dataset/" + target_date + "/forMachineLearning/"
+if not os.path.exists(forML_folder):
+  os.makedirs(forML_folder)
+vector_save_path = forML_folder + target_time
 
 #########################################
 
@@ -34,9 +44,9 @@ size = (width, height)
 frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 
-# # for save
-# fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-# save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
+# for save
+fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
 
 # 最初のフレームを取得してグレースケール変換
 ret, frame = cap.read()
@@ -102,8 +112,8 @@ while(cap.isOpened()):
   # ウィンドウに表示
   cv2.imshow('mask', img)
   
-  # # save per frame
-  # save.write(img)
+  # save per frame
+  save.write(img)
 
   # 次のフレーム、ポイントの準備
   frame_pre = frame_now.copy() # 次のフレームを最初のフレームに設定
@@ -116,8 +126,10 @@ while(cap.isOpened()):
 # 終了処理
 cv2.destroyAllWindows()
 cap.release()
-# save.release()
+save.release()
 
 vector_all = vector_all.reshape(-1, feature_num, 2)
 print(vector_all.shape)
-# np.save(vector_save_path, vector_all)
+
+# save vector for Machine Learning
+np.save(vector_save_path, vector_all)

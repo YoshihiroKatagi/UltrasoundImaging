@@ -1,8 +1,28 @@
 import cv2
+import os
 from datetime import datetime
 
-date = datetime.now().strftime("%Y%m%d_%H%M%S")
-save_path = "Img/BeforeProcessing/" + date + ".mp4"
+################### ファイル #####################
+# 新規フォルダ作成
+today = datetime.now().strftime("%Y-%m-%d")
+save_folder = "dataset/" + today + "/ultrasoundImage"
+# たぶん不要、確認完了次第消去
+# new_folder = "OpticalFlow/direct/" + save_folder
+if not os.path.exists(save_folder):
+  os.makedirs(save_folder + "/before")
+  os.makedirs(save_folder + "/after")
+  os.makedirs("dataset/" + today + "/gonioMeter")
+
+# 保存場所
+date = datetime.now().strftime("%H-%M-%S")
+save_path = save_folder + "/before/" + date + ".mp4"
+# date = datetime.now().strftime("%Y%m%d_%H%M%S")
+# save_path = "Img/BeforeProcessing/" + date + ".mp4"
+##################################################
+
+###############  超音波画像取得  ##################
+
+# 録画時間[s]
 time = 10
 
 cap = cv2.VideoCapture(0)
