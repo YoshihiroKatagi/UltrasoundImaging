@@ -9,7 +9,7 @@ target_date = datetime.now().strftime("%Y-%m-%d")
 # target_date = "2022-05-13"
 
 # 該当ファイルの時刻を手入力
-target_time = "13-11-05"
+target_time = "16-33-18"
 
 target_directry = "dataset/" + target_date + "/ultrasoundImage"
 target_path = target_directry + "/before/" + target_time + ".mp4"
@@ -93,6 +93,7 @@ while(cap.isOpened()):
   if good1.shape == good2.shape:
     vector_t = good2 - good1
     vector_all = np.append(vector_all, vector_t)
+    print(vector_t.shape)
 
 
   # 特徴点とオプティカルフローをフレーム・マスクに描画
@@ -123,13 +124,13 @@ while(cap.isOpened()):
   if cv2.waitKey(30) & 0xFF == ord('q'):
     break
 
-# 終了処理
-cv2.destroyAllWindows()
-cap.release()
-save.release()
-
 vector_all = vector_all.reshape(-1, feature_num, 2)
 print(vector_all.shape)
 
 # save vector for Machine Learning
 np.save(vector_save_path, vector_all)
+
+# 終了処理
+cv2.destroyAllWindows()
+cap.release()
+save.release()
