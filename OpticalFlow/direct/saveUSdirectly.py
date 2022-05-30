@@ -23,9 +23,9 @@ save_path = save_folder + "/before/" + date + ".mp4"
 ###############  超音波画像取得  ##################
 
 # 録画時間[s]
-time = 10
+time = 30
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 #properties
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -45,8 +45,8 @@ while True:
     cv2.imshow("USimage", frame)
 
     k = cv2.waitKey(1)&0xff
-    #「r」キーで録画開始
-    if k == ord('r'):
+    #「space」キーで録画開始
+    if k == ord(' '):
       cv2.destroyWindow("USimage")
       break
     
