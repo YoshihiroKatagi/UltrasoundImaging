@@ -7,15 +7,10 @@ print("Parameter: Trim Size")
 
 ############### ファイル #################
 # 該当フォルダの日付（計測日と異なる場合は手入力）
-# target_date = datetime.now().strftime("%Y-%m-%d")
 target_date = "2022-05-13"
 
-# ImageData =["16-18-47", "16-22-37", "16-27-40", "16-33-18"]
-ImageData = ["16-15-11", "16-17-57"]
-
-
-# 該当ファイルの時刻を手入力
-# target_time = "16-18-47"
+# 該当ファイルの時刻
+ImageData =["16-18-47", "16-22-37", "16-27-40", "16-33-18"]
 for id in ImageData:
   target_time = id
   print("\n\nTarget Image: " + str(id))
