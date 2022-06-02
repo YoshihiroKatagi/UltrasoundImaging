@@ -5,49 +5,23 @@ from datetime import datetime
 
 ### ※Execute directly under this file
 
-############### ファイル #################
+########################### ファイル ###########################
 # 該当フォルダの日付（計測日と異なる場合は手入力）
 target_date = "2022-05-30"
 # target_date = datetime.now().strftime("%Y-%m-%d")
 
-# 該当ファイルの時刻を手入力
-ImageData =["12-31-26"]
-# ImageData =["12-44-36"]
+# 使用する超音波画像のファイル名一覧をリストで取得
+image_path = "./dataset/" + target_date + "/ultrasoundImage/before"
+ImageData = os.listdir(image_path)
+
+# 該当ファイルの時刻を手入力（テスト用）
+# ImageData =["12-31-26"]
 # ImageData =["13-38-15", "14-24-32", "15-26-11", "16-05-07", "16-31-03", "17-11-41"]
-# ImageData =["12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42", "12-44-36", "12-46-08", "12-48-06", "12-50-01", "12-51-30"]
-# ImageData = [
-#   "12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42", "12-44-36", "12-46-08", "12-48-06", "12-50-01", "12-51-30", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#   "", "", "", "", "", "", "", "", "", "", 
-#             ]
-for id in ImageData:
-  target_time = id
-  print("\n\nTarget Image: " + str(id))
+###############################################################
 
-
-  target_directry = "dataset/" + target_date + "/ultrasoundImage"
-  target_path = target_directry + "/before/" + target_time + ".mp4"
-
-  save_path = target_directry + "/after/" + target_time + ".mp4"
-
-  forML_folder = "dataset/" + target_date + "/forMachineLearning/"
-  if not os.path.exists(forML_folder):
-    os.makedirs(forML_folder)
-  position_save_path = forML_folder + target_time
-
-  #########################################
-
-  ############## Optical Flow #############
-  cap = cv2.VideoCapture(target_path)
+########################  Optical Flow  ########################
+def OpticalFlow(t_path, i_s_path, p_s_path):
+  cap = cv2.VideoCapture(t_path)
 
   # Shi-Tomasi法のパラメータ（コーナー：物体の角を特徴点として検出）
   ft_params = dict(maxCorners=300,       # 特徴点の最大数
@@ -67,9 +41,9 @@ for id in ImageData:
   frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # 900
   frame_rate = int(cap.get(cv2.CAP_PROP_FPS)) # 30
 
-  # # for save
-  # fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-  # save = cv2.VideoWriter(save_path, fmt, frame_rate, size)
+  # for save
+  fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+  save = cv2.VideoWriter(i_s_path, fmt, frame_rate, size)
 
   # 最初のフレームを取得してグレースケール変換
   ret, frame = cap.read()
@@ -81,7 +55,6 @@ for id in ImageData:
   frame_pre_first = frame_pre[trim_h : height - trim_h, trim_w : width - trim_w]
 
   # Shi-Tomasi法で特徴点の検出
-  # feature_pre = cv2.goodFeaturesToTrack(frame_pre, mask=None, **ft_params)
   feature_pre = cv2.goodFeaturesToTrack(frame_pre_first, mask=None, **ft_params)
 
   for v in feature_pre:
@@ -109,8 +82,6 @@ for id in ImageData:
     # オプティカルフローを検出した特徴点を取得
     good1 = feature_pre[status == 1] # 1フレーム目
     good2 = feature_now[status == 1] # 2フレーム目
-
-    feature_num = good1.shape[0]
 
     # 座標を保存する配列を初期化、初期位置を保存
     if j == 0:
@@ -149,8 +120,8 @@ for id in ImageData:
     # ウィンドウに表示
     cv2.imshow('mask', img)
     
-    # # save per frame
-    # save.write(img)
+    # save per frame
+    save.write(img)
 
     # 次のフレーム、ポイントの準備
     frame_pre = frame_now.copy() # 次のフレームを最初のフレームに設定
@@ -163,12 +134,31 @@ for id in ImageData:
     j += 1
 
   position_all = np.delete(position_all, np.s_[50:], 1)
-  print("position_all: " + str(position_all.shape))
+  print("position_all: " + str(position_all.shape) + "\n")
 
-  # # save vector for Machine Learning
-  # np.save(position_save_path, position_all)
+  # save Position for Machine Learning
+  np.save(p_s_path, position_all)
 
   # 終了処理
   cv2.destroyAllWindows()
   cap.release()
-  # save.release()
+  save.release()
+################################################################
+
+###########################  Main  #############################
+# 画像ごとにOpticalFlow()を実行
+for id in ImageData:
+  target_image = os.path.splitext(id)[0]
+
+  target_directry = "./dataset/" + target_date + "/ultrasoundImage"
+  target_path = target_directry + "/before/" + target_image + ".mp4"
+  image_save_path = target_directry + "/after/" + target_image + ".mp4"
+  forML_folder = "./dataset/" + target_date + "/forMachineLearning/"
+  if not os.path.exists(forML_folder):
+    os.makedirs(forML_folder)
+  position_save_path = forML_folder + target_image
+
+  print("Target Image: " + str(id))
+  OpticalFlow(target_path, image_save_path, position_save_path)
+
+################################################################
