@@ -11,7 +11,9 @@ target_date = "2022-05-30"
 # target_date = datetime.now().strftime("%Y-%m-%d")
 
 # 該当ファイルの時刻を手入力
-ImageData =["12-44-36"]
+ImageData =["12-31-26"]
+# ImageData =["12-44-36"]
+# ImageData =["13-38-15", "14-24-32", "15-26-11", "16-05-07", "16-31-03", "17-11-41"]
 # ImageData =["12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42", "12-44-36", "12-46-08", "12-48-06", "12-50-01", "12-51-30"]
 # ImageData = [
 #   "12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42", "12-44-36", "12-46-08", "12-48-06", "12-50-01", "12-51-30", 
@@ -40,7 +42,7 @@ for id in ImageData:
   forML_folder = "dataset/" + target_date + "/forMachineLearning/"
   if not os.path.exists(forML_folder):
     os.makedirs(forML_folder)
-  vector_save_path = forML_folder + target_time
+  position_save_path = forML_folder + target_time
 
   #########################################
 
@@ -89,14 +91,10 @@ for id in ImageData:
   # mask用の配列を生成
   mask = np.zeros_like(frame)
 
-  # 全区間の全特徴量のベクトル
-  vector_all = np.empty(0)
-  position_all = np.empty(0)
-
   j = 0
   # 動画終了まで繰り返し
   while(cap.isOpened()):
-    if j >= frame_count - 2:
+    if j >= frame_count - 3:
       break
     
     # 次のフレームを取得し、グレースケールに変換
@@ -108,32 +106,31 @@ for id in ImageData:
     # Lucas-Kanade法でフレーム間の特徴点のオプティカルフローを計算
     feature_now, status, err = cv2.calcOpticalFlowPyrLK(frame_pre, frame_now, feature_pre, None, **lk_params)
 
-    # statusが0となるインデックスを取得
-    if np.where(status == 0)[0]:
-      vanish = np.where(status == 0)[0]
-      # for v in vanish:
-      #   print(v)
-
     # オプティカルフローを検出した特徴点を取得
     good1 = feature_pre[status == 1] # 1フレーム目
     good2 = feature_now[status == 1] # 2フレーム目
 
     feature_num = good1.shape[0]
 
+    # 座標を保存する配列を初期化、初期位置を保存
     if j == 0:
       first_num = good1.shape[0]
-      position_t = good1
-      position_all = np.append(position_all, position_t)
-      # print("first: " + str(first_num))
+      position_all = np.empty([0, good1.shape[0], 2])
+      position_t = good1.reshape([1, good1.shape[0], 2])
+      position_all = np.append(position_all, position_t, axis=0)
+
+    # statusが0となるインデックスを取得
+    vanish = np.where(status == 0)[0]
+
+    # position_allからstatus=0の要素を削除
+    for i, v in enumerate(vanish):
+      # print("i, v: " + str(i) + ", " + str(v))
+      position_all = np.delete(position_all, v - i, 1)
+
     
-    position_t = good2
-    position_all = np.append(position_all, position_t)
-
-    # # ある時刻のベクトルを導出
-    # if good1.shape == good2.shape:
-    #   vector_t = good2 - good1
-    #   vector_all = np.append(vector_all, vector_t)
-
+    # 各時刻における座標を保存
+    position_t = good2.reshape([1, good2.shape[0], 2])
+    position_all = np.append(position_all, position_t, axis=0)
 
     # 特徴点とオプティカルフローをフレーム・マスクに描画
     for i, (pt1, pt2) in enumerate(zip(good1, good2)):
@@ -165,17 +162,11 @@ for id in ImageData:
     
     j += 1
 
-
-  # last_num = vector_t.shape[0]
-  # print("last:  " + str(last_num))
-  # proportion = last_num / first_num * 100
-  # print('proportion: {:.1f}'.format(proportion))
-  # vector_all = vector_all.reshape(-1, feature_num, 2)
-  # print(vector_all.shape)
-
+  position_all = np.delete(position_all, np.s_[50:], 1)
+  print("position_all: " + str(position_all.shape))
 
   # # save vector for Machine Learning
-  # np.save(vector_save_path, vector_all)
+  # np.save(position_save_path, position_all)
 
   # 終了処理
   cv2.destroyAllWindows()
