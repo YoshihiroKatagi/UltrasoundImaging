@@ -1,9 +1,3 @@
-# ※Don't use this file
-# ※Instead, opticalFlowVer3 is available now
-
-# Ver2: すべての点において最後まで追跡できなければならない、移動量(x2-x1, y2-y1)を保存
-# Ver3: 最後まで追跡できなくてもよい、座標(x1, y1)を保存
-
 import cv2
 import os
 import numpy as np
@@ -17,9 +11,22 @@ target_date = "2022-05-30"
 # target_date = datetime.now().strftime("%Y-%m-%d")
 
 # 該当ファイルの時刻を手入力
-# ImageData =["12-44-36"]
-ImageData =["12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42", "12-44-36", "12-46-08", "12-48-06", "12-50-01", "12-51-30"]
-
+ImageData =["12-44-36"]
+# ImageData =["12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42", "12-44-36", "12-46-08", "12-48-06", "12-50-01", "12-51-30"]
+# ImageData = [
+#   "12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42", "12-44-36", "12-46-08", "12-48-06", "12-50-01", "12-51-30", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#   "", "", "", "", "", "", "", "", "", "", 
+#             ]
 for id in ImageData:
   target_time = id
   print("\n\nTarget Image: " + str(id))
@@ -41,7 +48,7 @@ for id in ImageData:
   cap = cv2.VideoCapture(target_path)
 
   # Shi-Tomasi法のパラメータ（コーナー：物体の角を特徴点として検出）
-  ft_params = dict(maxCorners=50,       # 特徴点の最大数
+  ft_params = dict(maxCorners=300,       # 特徴点の最大数
                   qualityLevel=0.3,    # 特徴点を選択するしきい値で、高いほど特徴点は厳選されて減る。
                   minDistance=5,       # 特徴点間の最小距離
                   blockSize=20)         # 特徴点の計算に使うブロック（周辺領域）サイズ
@@ -84,6 +91,7 @@ for id in ImageData:
 
   # 全区間の全特徴量のベクトル
   vector_all = np.empty(0)
+  position_all = np.empty(0)
 
   j = 0
   # 動画終了まで繰り返し
@@ -100,6 +108,12 @@ for id in ImageData:
     # Lucas-Kanade法でフレーム間の特徴点のオプティカルフローを計算
     feature_now, status, err = cv2.calcOpticalFlowPyrLK(frame_pre, frame_now, feature_pre, None, **lk_params)
 
+    # statusが0となるインデックスを取得
+    if np.where(status == 0)[0]:
+      vanish = np.where(status == 0)[0]
+      # for v in vanish:
+      #   print(v)
+
     # オプティカルフローを検出した特徴点を取得
     good1 = feature_pre[status == 1] # 1フレーム目
     good2 = feature_now[status == 1] # 2フレーム目
@@ -108,12 +122,17 @@ for id in ImageData:
 
     if j == 0:
       first_num = good1.shape[0]
-      print("first: " + str(first_num))
+      position_t = good1
+      position_all = np.append(position_all, position_t)
+      # print("first: " + str(first_num))
+    
+    position_t = good2
+    position_all = np.append(position_all, position_t)
 
-    # ある時刻のベクトルを導出
-    if good1.shape == good2.shape:
-      vector_t = good2 - good1
-      vector_all = np.append(vector_all, vector_t)
+    # # ある時刻のベクトルを導出
+    # if good1.shape == good2.shape:
+    #   vector_t = good2 - good1
+    #   vector_all = np.append(vector_all, vector_t)
 
 
     # 特徴点とオプティカルフローをフレーム・マスクに描画
@@ -146,13 +165,14 @@ for id in ImageData:
     
     j += 1
 
-  last_num = vector_t.shape[0]
-  print("last:  " + str(last_num))
-  proportion = last_num / first_num * 100
-  print('proportion: {:.1f}'.format(proportion))
-  if proportion == 100:
-    vector_all = vector_all.reshape(-1, feature_num, 2)
-    print(vector_all.shape)
+
+  # last_num = vector_t.shape[0]
+  # print("last:  " + str(last_num))
+  # proportion = last_num / first_num * 100
+  # print('proportion: {:.1f}'.format(proportion))
+  # vector_all = vector_all.reshape(-1, feature_num, 2)
+  # print(vector_all.shape)
+
 
   # # save vector for Machine Learning
   # np.save(vector_save_path, vector_all)

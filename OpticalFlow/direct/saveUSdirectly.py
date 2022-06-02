@@ -2,6 +2,9 @@ import cv2
 import os
 from datetime import datetime
 
+### ※Execute directly under this file
+### データセットが意図しない場所にできる可能性あり
+
 ################### ファイル #####################
 # 新規フォルダ作成
 today = datetime.now().strftime("%Y-%m-%d")

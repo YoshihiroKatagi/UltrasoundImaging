@@ -5,6 +5,8 @@ from datetime import datetime
 
 print("Parameter: Trim Size")
 
+### ※Execute directly under this file
+
 ############### ファイル #################
 # 該当フォルダの日付（計測日と異なる場合は手入力）
 target_date = "2022-05-13"
