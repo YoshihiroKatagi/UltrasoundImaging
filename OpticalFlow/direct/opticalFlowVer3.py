@@ -134,7 +134,7 @@ def OpticalFlow(t_path, i_s_path, p_s_path):
     j += 1
 
   position_all = np.delete(position_all, np.s_[50:], 1)
-  print("position_all: " + str(position_all.shape) + "\n")
+  print("position_all: " + str(position_all.shape) + "\n") # (898, 50, 2)
 
   # save Position for Machine Learning
   np.save(p_s_path, position_all)
