@@ -85,7 +85,6 @@ def OpticalFlow(t_path, i_s_path, p_s_path):
 
     # 座標を保存する配列を初期化、初期位置を保存
     if j == 0:
-      first_num = good1.shape[0]
       position_all = np.empty([0, good1.shape[0], 2])
       position_t = good1.reshape([1, good1.shape[0], 2])
       position_all = np.append(position_all, position_t, axis=0)
@@ -134,7 +133,8 @@ def OpticalFlow(t_path, i_s_path, p_s_path):
     j += 1
 
   position_all = np.delete(position_all, np.s_[50:], 1)
-  print("position_all: " + str(position_all.shape) + "\n") # (898, 50, 2)
+  position_all = position_all.reshape([position_all.shape[0], position_all.shape[1] * 2])
+  print("Shape of position_all: " + str(position_all.shape) + "\n") # (898, 100)
 
   # save Position for Machine Learning
   np.save(p_s_path, position_all)

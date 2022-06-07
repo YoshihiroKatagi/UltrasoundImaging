@@ -1,4 +1,5 @@
 import csv
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
@@ -10,13 +11,16 @@ target_column = 2
 target_date = "2022-05-30"
 path = "C:/Users/katagi/Desktop/Workspace/Research/UltrasoundImaging/OpticalFlow/direct/dataset/" + target_date + "/gonioMeter/"
 
-gonio_data = ["12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42"]
+gonio_path = "./dataset/" + target_date + "/goniometer"
+gonio_data = os.listdir(gonio_path)
+
+# gonio_data = ["12-31-26", "12-34-25", "12-39-14", "12-40-51", "12-42-42"]
 
 def read_csv():
   thetas = list()
 
   for i in range(len(gonio_data)):
-    gonio_path = path + gonio_data[i] + ".csv"
+    gonio_path = path + gonio_data[i]
 
     with open(gonio_path) as f:
       reader = csv.reader(f)
@@ -63,6 +67,8 @@ def resample_angle_data(thetas):
 
 
 thetas = read_csv()
-print("Shape of Thetas: " + str(thetas.shape))
+# print("Shape of Thetas: " + str(thetas.shape))
 resampled_thetas = resample_angle_data(thetas)
 print("Shape of Resampled Thetas: " + str(resampled_thetas.shape))
+gonio_save_path = "./dataset/" + target_date + "/forMachineLearning/gonioData"
+np.save(gonio_save_path, resampled_thetas)

@@ -9,8 +9,6 @@ from datetime import datetime
 # 新規フォルダ作成
 today = datetime.now().strftime("%Y-%m-%d")
 save_folder = "dataset/" + today + "/ultrasoundImage"
-# たぶん不要、確認完了次第消去
-# new_folder = "OpticalFlow/direct/" + save_folder
 if not os.path.exists(save_folder):
   os.makedirs(save_folder + "/before")
   os.makedirs(save_folder + "/after")
@@ -53,7 +51,6 @@ while True:
       cv2.destroyWindow("USimage")
       break
     
-
 
 #録画
 for i in range(frame_count):
