@@ -47,6 +47,20 @@ def ReadData(): # 10試行分（どのパターンかは上のパラメータで
   return US_data_block, gonio_data
 #####################################################################
 
+###################  Divide into Train and Test  ####################
+def DivideIntoTrainAndTest(x, theta, i):# Train:(8, 898, 100), (8, 898, 1)  Test:(2, 898, 100), (2, 898, 1)
+  if i == 0:
+    x_train, theta_train = x[2:], theta[2:]
+  elif i == 4:
+    x_train, theta_train = x[:-2], theta[:-2]
+  else:
+    x_train, theta_train = np.concatenate([x[:i*2], x[(i+1)*2:]]), np.concatenate([theta[:i*2], theta[(i+1)*2:]])
+
+  x_test, theta_test = x[i*2 : (i+1)*2], theta[i*2 : (i+1)*2] # 
+
+  return x_train, theta_train, x_test, theta_test
+#####################################################################
+
 ############################  Analysis  #############################
 def Analysis(X, theta): #X: (8, 898, 100), theta: (8, 898, 1)
   W = list()
@@ -120,17 +134,9 @@ Xs, Thetas = ReadData()
 # print(Xs.shape, Thetas.shape) # (10, 898, 1), (10, 898, 100)
 T = Xs.shape[1]
 for i in range(5):
-  if i == 0:
-    X_train, Theta_train = Xs[2:], Thetas[2:] # (8, 898, 100), (8, 898, 1)
-  elif i == 4:
-    X_train, Theta_train = Xs[:-2], Thetas[:-2]
-  else:
-    X_train, Theta_train = np.concatenate([Xs[:i*2], Xs[(i+1)*2:]]), np.concatenate([Thetas[:i*2], Thetas[(i+1)*2:]])
-  X_test, Theta_test = Xs[i*2 : (i+1)*2], Thetas[i*2 : (i+1)*2] # (2, 898, 100), (2, 898, 1)
-
+  X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(Xs, Thetas, i)
   W = Analysis(X_train, Theta_train) # (898, 100)
   
-  # print(Theta_pred.shape)
   for j in range(len(X_test)):
     # パターン内のテスト番号(1~10)
     test_num = 2*i + j + 1
