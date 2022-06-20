@@ -15,7 +15,7 @@ target_date = "2022-05-30"
 target_path = "C:/Users/katagi/Desktop/Workspace/Research/UltrasoundImaging/OpticalFlow/direct/dataset/" + target_date + "/forMachineLearning/"
 
 # 検証するパターン（12パターン × 10試行 = 120個）
-patern = 5 # 1~12(1, 2, 3, 4, 8, 11, 12)
+patern = 1 # 1~12(1, 2, 3, 4, 8, 11, 12)
 
 # 結果保存用パス
 result_folder = "dataset/" + target_date + "/results"
