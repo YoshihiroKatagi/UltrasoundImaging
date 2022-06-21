@@ -56,31 +56,30 @@ def DivideIntoTrainAndTest(x, theta, i):# Train:(8, 898, 100), (8, 898, 1)  Test
   else:
     x_train, theta_train = np.concatenate([x[:i*2], x[(i+1)*2:]]), np.concatenate([theta[:i*2], theta[(i+1)*2:]])
 
-  x_test, theta_test = x[i*2 : (i+1)*2], theta[i*2 : (i+1)*2] # 
+  x_test, theta_test = x[i*2 : (i+1)*2], theta[i*2 : (i+1)*2]
 
   return x_train, theta_train, x_test, theta_test
 #####################################################################
 
 ############################  Analysis  #############################
-def Analysis(X, theta): #X: (8, 898, 100), theta: (8, 898, 1)
+def Analysis(x, theta): #x: (8, 898, 100), theta: (8, 898, 1)
   W = list()
-  X = np.transpose(X, (1, 0, 2)) # (898, 8, 100)
+  x = np.transpose(x, (1, 0, 2)) # (898, 8, 100)
   theta = np.transpose(theta, (1, 0, 2)) #(898, 8, 1)
-  for X_t, theta_t in zip(X, theta):
-    X_T_t = X_t.T
-    X_T_X_inv = np.linalg.pinv(np.dot(X_T_t, X_t))
-    W_t = np.dot(np.dot(X_T_X_inv, X_T_t), theta_t)
+  for x_t, theta_t in zip(x, theta):
+    x_t_T = x_t.T
+    x_T_x_inv = np.linalg.pinv(np.dot(x_t_T, x_t))
+    W_t = np.dot(np.dot(x_T_x_inv, x_t_T), theta_t)
     W.append(W_t)
   W = np.array(W)
-  W = W.reshape([X.shape[0], X.shape[2]]) # (898, 100)
+  W = W.reshape([x.shape[0], x.shape[2]]) # (898, 100)
   return W
 #####################################################################
 
 ###########################  Visualize  #############################
 def Visualize(y, y_pred, n):
   x = np.arange(y.shape[0])
-  y = y.reshape(-1)
-  y_pred = y_pred.reshape(-1)
+  y = y.reshape(-1) # (898,)
 
   fig1 = plt.figure()
   plt.title("Wrist angle")
@@ -115,8 +114,6 @@ def Calc_R2andRMSE(theta, theta_pred, T):
     L = np.sum((theta - theta_pred)**2)
     RMSE = np.sqrt(L/T)
     return RMSE
-  
-  # print(theta.shape, theta_pred.shape) # (898,), (898,)
 
   RMSE = _RMSE(theta, theta_pred, T)
   R2 = _R2(theta, theta_pred)
@@ -130,8 +127,6 @@ def Calc_R2andRMSE(theta, theta_pred, T):
 
 #############################  Main  ################################
 Xs, Thetas = ReadData()
-# print("X, Theta: ")
-# print(Xs.shape, Thetas.shape) # (10, 898, 1), (10, 898, 100)
 T = Xs.shape[1]
 for i in range(5):
   X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(Xs, Thetas, i)
@@ -145,7 +140,7 @@ for i in range(5):
     Theta_pred = list()
     for X_t, W_t in zip(X_test[j], W):
       Theta_pred.append(np.dot(W_t, X_t))
-    Theta_pred = np.array(Theta_pred) # (898, 1)
+    Theta_pred = np.array(Theta_pred) # (898,)
     Visualize(Theta_test[j], Theta_pred, test_num)
     Calc_R2andRMSE(Theta_test[j], Theta_pred, T)
 #####################################################################

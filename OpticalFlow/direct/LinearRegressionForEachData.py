@@ -48,29 +48,43 @@ def ReadData(): # 10試行分（どのパターンかは上のパラメータで
   gonio_data_path = target_path + "gonioData.npy"
   gonio_data = np.load(gonio_data_path)
   gonio_data = gonio_data[10*(patern - 1) : 10*patern]
+
   return US_data_block, gonio_data
 #####################################################################
 
+###################  Divide into Train and Test  ####################
+def DivideIntoTrainAndTest(x, theta):# Train:(4, 179, 100), (4, 179, 1)  Test:(179, 100), (179, 1)
+  x, theta = x[3:], theta[3:]
+  x = x.reshape(5, x.shape[0] // 5, x.shape[1])
+  theta = theta.reshape(5, theta.shape[0] // 5, theta.shape[1])
+  x_train, theta_train = x[:4], theta[:4]
+  x_test, theta_test = x[4], theta[4]
+
+  return x_train, theta_train, x_test, theta_test
+#####################################################################
+
 ############################  Analysis  #############################
-def Analysis(X, theta): #X: (8, 898, 100), theta: (8, 898, 1)
+def Analysis(x, theta): #x: (4, 179, 100), theta: (4, 179, 1)
   W = list()
-  X = np.transpose(X, (1, 0, 2)) # (898, 8, 100)
-  theta = np.transpose(theta, (1, 0, 2)) #(898, 8, 1)
-  for X_t, theta_t in zip(X, theta):
-    X_T_t = X_t.T
-    X_T_X_inv = np.linalg.pinv(np.dot(X_T_t, X_t))
-    W_t = np.dot(np.dot(X_T_X_inv, X_T_t), theta_t)
+  x = np.transpose(x, (1, 0, 2)) # (179, 4, 100)
+  theta = np.transpose(theta, (1, 0, 2)) #(179, 4, 1)
+  for x_t, theta_t in zip(x, theta):
+    # x_t = x_t.reshape(1, x_t.shape[0])
+    # theta_t = theta_t.reshape(1, theta_t.shape[0]) # (1, 100), (1, 1)
+    x_t_T = x_t.T
+    x_T_x_inv = np.linalg.pinv(np.dot(x_t_T, x_t))
+    W_t = np.dot(np.dot(x_T_x_inv, x_t_T), theta_t)
     W.append(W_t)
   W = np.array(W)
-  W = W.reshape([X.shape[0], X.shape[2]]) # (898, 100)
+  W = W.reshape([x.shape[0], x.shape[2]]) # (179, 100)
+
   return W
 #####################################################################
 
 ###########################  Visualize  #############################
 def Visualize(y, y_pred, n):
   x = np.arange(y.shape[0])
-  y = y.reshape(-1)
-  y_pred = y_pred.reshape(-1)
+  y = y.reshape(-1) # (179,)
 
   fig1 = plt.figure()
   plt.title("Wrist angle")
@@ -105,8 +119,6 @@ def Calc_R2andRMSE(theta, theta_pred, T):
     L = np.sum((theta - theta_pred)**2)
     RMSE = np.sqrt(L/T)
     return RMSE
-  
-  # print(theta.shape, theta_pred.shape) # (898,), (898,)
 
   RMSE = _RMSE(theta, theta_pred, T)
   R2 = _R2(theta, theta_pred)
@@ -119,31 +131,22 @@ def Calc_R2andRMSE(theta, theta_pred, T):
 #####################################################################
 
 #############################  Main  ################################
-Xs, Thetas = ReadData()
-# print("X, Theta: ")
-# print(Xs.shape, Thetas.shape) # (10, 898, 1), (10, 898, 100)
+print("-----Patern" + str(patern) + "-----\n")
+
+Xs, Thetas = ReadData() # (10, 898, 100), (10, 898, 1)
 T = Xs.shape[1]
-for i in range(5):
-  if i == 0:
-    X_train, Theta_train = Xs[2:], Thetas[2:] # (8, 898, 100), (8, 898, 1)
-  elif i == 4:
-    X_train, Theta_train = Xs[:-2], Thetas[:-2]
-  else:
-    X_train, Theta_train = np.concatenate([Xs[:i*2], Xs[(i+1)*2:]]), np.concatenate([Thetas[:i*2], Thetas[(i+1)*2:]])
-  X_test, Theta_test = Xs[i*2 : (i+1)*2], Thetas[i*2 : (i+1)*2] # (2, 898, 100), (2, 898, 1)
+for i in range(10):
+  test_num = i + 1
+  print("--test" + str(test_num) + "--")
 
-  W = Analysis(X_train, Theta_train) # (898, 100)
-  
-  # print(Theta_pred.shape)
-  for j in range(len(X_test)):
-    # パターン内のテスト番号(1~10)
-    test_num = 2*i + j + 1
-    print("test" + str(test_num) + ":")
+  X, Theta = Xs[i], Thetas[i] # (898, 100), (898, 1)
+  X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(X, Theta) # (4, 179, 100), (4, 179, 1), (179, 100), (179, 1)
+  W = Analysis(X_train, Theta_train) # (718, 100)
 
-    Theta_pred = list()
-    for X_t, W_t in zip(X_test[j], W):
-      Theta_pred.append(np.dot(W_t, X_t))
-    Theta_pred = np.array(Theta_pred) # (898, 1)
-    Visualize(Theta_test[j], Theta_pred, test_num)
-    Calc_R2andRMSE(Theta_test[j], Theta_pred, T)
+  Theta_pred = list()
+  for X_t, W_t in zip(X_test, W):
+    Theta_pred.append(np.dot(W_t, X_t))
+  Theta_pred = np.array(Theta_pred) # (179,)
+  Visualize(Theta_test, Theta_pred, test_num)
+  Calc_R2andRMSE(Theta_test, Theta_pred, T)
 #####################################################################
