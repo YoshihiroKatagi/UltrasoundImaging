@@ -35,15 +35,20 @@ with open(result_path + "/R2andRMSE.csv", "w") as f:
 
 ###########################  Read Data  #############################
 def ReadData(): # 10試行分（どのパターンかは上のパラメータで指定する）
-  target_US = os.listdir(target_path)
-  US_data_block = np.empty([0, default_US_shape[0], default_US_shape[1]])
-  for i in range(10):
-    data_num = 10*(patern - 1) + i
-    US_data_path = target_path + target_US[data_num]
-    US_data = np.load(US_data_path)
-    if US_data.shape == default_US_shape:
-      US_data = US_data.reshape([1, US_data.shape[0], US_data.shape[1]])
-      US_data_block = np.append(US_data_block, US_data, axis=0)
+  feature_points_data_path = target_path + "FeaturePointsData.npy"
+  feature_points_data = np.load(feature_points_data_path)
+  print(feature_points_data.shape)
+  exit()
+
+  # target_US = os.listdir(target_path)
+  # US_data_block = np.empty([0, default_US_shape[0], default_US_shape[1]])
+  # for i in range(10):
+  #   data_num = 10*(patern - 1) + i
+  #   US_data_path = target_path + target_US[data_num]
+  #   US_data = np.load(US_data_path)
+  #   if US_data.shape == default_US_shape:
+  #     US_data = US_data.reshape([1, US_data.shape[0], US_data.shape[1]])
+  #     US_data_block = np.append(US_data_block, US_data, axis=0)
 
   gonio_data_path = target_path + "gonioData.npy"
   gonio_data = np.load(gonio_data_path)

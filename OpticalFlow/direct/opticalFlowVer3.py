@@ -1,3 +1,13 @@
+# ※Don't use this file
+# ※Instead, opticalFlowVer4 is available now
+
+# difference:
+# Ver3: position_allを画像ごとに保存
+# Ver4: position_allをまとめてPosition_Allとして保存
+# Ver4: + 最初のフレームで特徴点を除外するときのエラーを解決
+# Ver4: + いくつか確認のための関数追加、この中でパラメータチェックできるようにした
+
+
 import cv2
 import os
 import numpy as np
