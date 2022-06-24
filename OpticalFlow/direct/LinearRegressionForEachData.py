@@ -1,4 +1,4 @@
-# OpticalFlow Ver4
+# LinearRegression Ver2
 # 交差検証をせず1つの試行で学習・テストを行う
 
 

@@ -2,36 +2,77 @@ import cv2
 import os
 import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 ### ※Execute directly under this file
 
-########################### ファイル ###########################
+########################### ファイル ############################
 # 該当フォルダの日付（計測日と異なる場合は手入力）
 target_date = "2022-05-30"
 # target_date = datetime.now().strftime("%Y-%m-%d")
 
-# # 使用する超音波画像のファイル名一覧をリストで取得
-# image_path = "./dataset/" + target_date + "/ultrasoundImage/before"
-# ImageData = os.listdir(image_path)
+# 使用する超音波画像のファイル名一覧をリストで取得
+image_path = "./dataset/" + target_date + "/ultrasoundImage/before"
+ImageData = os.listdir(image_path)
 
 # 該当ファイルの時刻を手入力（テスト用）
-# ImageData =["12-31-26"]
-ImageData =["13-38-15", "14-24-32", "15-26-11", "16-05-07", "16-31-03", "17-11-41"]
-###############################################################
+# ImageData =["14-06-46", "16-05-07"]
+# ImageData =["14-36-37"]
+# ImageData =["13-38-15", "14-24-32", "15-26-11", "16-05-07", "16-31-03", "17-11-41"]
+################################################################
+
+#######################  Make Parameters  ######################
+def MakeParameters(n, a, d, r):
+  P = []
+  for i in range(n):
+    p = a + i * d
+    p = round(p, r)
+    P.append(p)
+  
+  return P
+################################################################
+
+#########################  Make Figure  ########################
+def MakeFigure(c):
+  x = c[0, :, 0]
+  y = c[0, :, 1]
+  fig = plt.figure()
+  plt.title("Feature Points")
+  plt.xlabel("x")
+  plt.ylabel("y")
+  plt.scatter(x, y)
+  plt.grid(True)
+  plt.show()
+################################################################
+
+#####################  Check PositionAll  ######################
+# 特徴点の除外が正しくできているかの確認
+# （position_all = np.delete(position_all, v - i, 1)　の確認）
+def CheckPositionAll(p_a, n):
+  x = p_a[:, n, 0]
+  y = p_a[:, n, 1]
+  fig = plt.figure()
+  plt.title("Feature Points")
+  plt.xlabel("x")
+  plt.ylabel("y")
+  plt.plot(x, y, color="cornflowerblue", linewidth=2)
+  plt.grid(True)
+  plt.show()
+################################################################
 
 ########################  Optical Flow  ########################
-def OpticalFlow(t_path, i_s_path, p_s_path):
+def OpticalFlow(t_path, i_s_path, p):
   cap = cv2.VideoCapture(t_path)
 
   # Shi-Tomasi法のパラメータ（コーナー：物体の角を特徴点として検出）
-  ft_params = dict(maxCorners=300,       # 特徴点の最大数
-                  qualityLevel=0.3,    # 特徴点を選択するしきい値で、高いほど特徴点は厳選されて減る。
-                  minDistance=5,       # 特徴点間の最小距離
-                  blockSize=20)         # 特徴点の計算に使うブロック（周辺領域）サイズ
+  ft_params = dict(maxCorners=500,       # 特徴点の最大数
+                  qualityLevel=0.1,    # 特徴点を選択するしきい値で、高いほど特徴点は厳選されて減る。
+                  minDistance=3,       # 特徴点間の最小距離
+                  blockSize=15)         # 特徴点の計算に使うブロック（周辺領域）サイズ
 
   # Lucal-Kanade法のパラメータ（追跡用）
   lk_params = dict(winSize=(80,80),     # オプティカルフローの推定の計算に使う周辺領域サイズ
-                  maxLevel=4,          # ピラミッド数
+                  maxLevel=p,          # ピラミッド数
                   criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))       # 探索アルゴリズムの終了条件
 
   # #properties
@@ -89,14 +130,21 @@ def OpticalFlow(t_path, i_s_path, p_s_path):
       position_t = good1.reshape([1, good1.shape[0], 2])
       position_all = np.append(position_all, position_t, axis=0)
 
+      first_num = good1.shape[0]
+      print("first: " + str(first_num))
+
     # statusが0となるインデックスを取得
     vanish = np.where(status == 0)[0]
+    # if len(vanish) != 0:
+    #   print("j: " + str(j))
+    #   print(vanish)
 
     # position_allからstatus=0の要素を削除
     for i, v in enumerate(vanish):
-      # 最初のフレーム間で特徴点が消えている場合
+      # 最初のフレーム間で特徴点が消えている場合は何もしない
       if j == 0:
         break
+      # print("i, v: " + str(i) + ", " + str(v))
       position_all = np.delete(position_all, v - i, 1)
     
     # 各時刻における座標を保存
@@ -133,22 +181,35 @@ def OpticalFlow(t_path, i_s_path, p_s_path):
     
     j += 1
 
-  position_all = np.delete(position_all, np.s_[50:], 1)
-  position_all = position_all.reshape([position_all.shape[0], position_all.shape[1] * 2])
-  print("Shape of position_all: " + str(position_all.shape) + "\n") # (898, 100)
+  last_num = good2.shape[0]
+  print("last: " + str(last_num))
+  proportion = last_num/first_num * 100
+  print("proportion: {:.1f}".format(proportion))
 
-  # # save Position for Machine Learning
-  # np.save(p_s_path, position_all)
+  # for i in range(10):
+  #   n = i * 10
+  #   print("n: " + str(n))
+  #   CheckPositionAll(position_all, n)
+
+  position_all = np.delete(position_all, np.s_[100:], 1) # (898, 100, 2)
+  # MakeFigure(position_all)
+  position_all = position_all.reshape([1, position_all.shape[0], position_all.shape[1] * 2])
+  print("position_all: " + str(position_all.shape) + "\n") # (1, 898, 200)
 
   # 終了処理
   cv2.destroyAllWindows()
   cap.release()
   # save.release()
+
+  return position_all
 ################################################################
 
 ###########################  Main  #############################
+# パラメータlist作成
+Parameters = MakeParameters(1, 4, 1, 1)
+
 # 画像ごとにOpticalFlow()を実行
-for id in ImageData:
+for i, id in enumerate(ImageData):
   target_image = os.path.splitext(id)[0]
 
   target_directry = "./dataset/" + target_date + "/ultrasoundImage"
@@ -159,7 +220,17 @@ for id in ImageData:
     os.makedirs(forML_folder)
   position_save_path = forML_folder + target_image
 
-  print("Target Image: " + str(id))
-  OpticalFlow(target_path, image_save_path, position_save_path)
+  print("-----Target Image: " + str(id) + "-----")
+
+  for p in Parameters:
+    print("---param: " + str(p) + "---")
+    Position_by_Image = OpticalFlow(target_path, image_save_path, p) # (1, 898, 200)
+    if i == 0:
+      Position_All = np.empty([0, Position_by_Image.shape[1], Position_by_Image.shape[2]])
+    Position_All = np.append(Position_All, Position_by_Image, axis=0) # (120, 898, 200)
+
+  print("Position_All: " + str(Position_All.shape))
+  # 全画像における特徴点の座標を保存
+  # np.save(position_save_path, Position_All)
 
 ################################################################
