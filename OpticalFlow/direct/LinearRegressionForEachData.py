@@ -1,4 +1,3 @@
-# LinearRegression Ver2
 # 交差検証をせず1つの試行で学習・テストを行う
 
 
@@ -19,7 +18,7 @@ target_date = "2022-05-30"
 target_path = "C:/Users/katagi/Desktop/Workspace/Research/UltrasoundImaging/OpticalFlow/direct/dataset/" + target_date + "/forMachineLearning/"
 
 # 検証するパターン（12パターン × 10試行 = 120個）
-patern = 12 # 1~12(1, 2, 3, 4, 8, 11, 12)
+patern = 1 # 1~12(1, 2, 3, 4, 8, 11, 12)
 
 # 結果保存用パス
 result_folder = "dataset/" + target_date + "/results"
@@ -37,7 +36,8 @@ with open(result_path + "/R2andRMSE.csv", "w") as f:
 def ReadData(): # 10試行分（どのパターンかは上のパラメータで指定する）
   feature_points_data_path = target_path + "FeaturePointsData.npy"
   feature_points_data = np.load(feature_points_data_path)
-  feature_points_data = feature_points_data[10*(patern - 1): 10*patern]
+  feature_points_data = feature_points_data[10*(patern - 1): 10*patern, :, :100]
+  # print(feature_points_data.shape)
 
   gonio_data_path = target_path + "gonioData.npy"
   gonio_data = np.load(gonio_data_path)
@@ -58,13 +58,11 @@ def DivideIntoTrainAndTest(x, theta):# Train:(4, 179, 100), (4, 179, 1)  Test:(1
 #####################################################################
 
 ############################  Analysis  #############################
-def Analysis(x, theta): #x: (4, 179, 100), theta: (4, 179, 1)
+def Analysis(x, theta): #x: (718, 100), theta: (718, 1)
   W = list()
   x = np.transpose(x, (1, 0, 2)) # (179, 4, 100)
   theta = np.transpose(theta, (1, 0, 2)) #(179, 4, 1)
   for x_t, theta_t in zip(x, theta):
-    # x_t = x_t.reshape(1, x_t.shape[0])
-    # theta_t = theta_t.reshape(1, theta_t.shape[0]) # (1, 100), (1, 1)
     x_t_T = x_t.T
     x_T_x_inv = np.linalg.pinv(np.dot(x_t_T, x_t))
     W_t = np.dot(np.dot(x_T_x_inv, x_t_T), theta_t)
@@ -134,8 +132,8 @@ for i in range(10):
   print("--test" + str(test_num) + "--")
 
   X, Theta = Xs[i], Thetas[i] # (898, 100), (898, 1)
-  X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(X, Theta) # (4, 179, 100), (4, 179, 1), (179, 100), (179, 1)
-  W = Analysis(X_train, Theta_train) # (718, 100)
+  X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(X, Theta) # (718, 100), (718, 1), (898, 100), (898, 1)
+  W = Analysis(X_train, Theta_train) # (1, 100)
 
   Theta_pred = list()
   for X_t, W_t in zip(X_test, W):
