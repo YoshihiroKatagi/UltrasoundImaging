@@ -19,7 +19,7 @@ target_date = "2022-05-30"
 target_path = "C:/Users/katagi/Desktop/Workspace/Research/UltrasoundImaging/OpticalFlow/direct/dataset/" + target_date + "/forMachineLearning/"
 
 # 検証するパターン（12パターン × 10試行 = 120個）
-patern =12 # 1~12(1, 2, 3, 4, 8, 11, 12)
+patern = 12 # 1~12(1, 2, 3, 4, 8, 11, 12)
 
 # 結果保存用パス
 result_folder = "dataset/" + target_date + "/results"
@@ -37,24 +37,13 @@ with open(result_path + "/R2andRMSE.csv", "w") as f:
 def ReadData(): # 10試行分（どのパターンかは上のパラメータで指定する）
   feature_points_data_path = target_path + "FeaturePointsData.npy"
   feature_points_data = np.load(feature_points_data_path)
-  print(feature_points_data.shape)
-  exit()
-
-  # target_US = os.listdir(target_path)
-  # US_data_block = np.empty([0, default_US_shape[0], default_US_shape[1]])
-  # for i in range(10):
-  #   data_num = 10*(patern - 1) + i
-  #   US_data_path = target_path + target_US[data_num]
-  #   US_data = np.load(US_data_path)
-  #   if US_data.shape == default_US_shape:
-  #     US_data = US_data.reshape([1, US_data.shape[0], US_data.shape[1]])
-  #     US_data_block = np.append(US_data_block, US_data, axis=0)
+  feature_points_data = feature_points_data[10*(patern - 1): 10*patern]
 
   gonio_data_path = target_path + "gonioData.npy"
   gonio_data = np.load(gonio_data_path)
   gonio_data = gonio_data[10*(patern - 1) : 10*patern]
 
-  return US_data_block, gonio_data
+  return feature_points_data, gonio_data
 #####################################################################
 
 ###################  Divide into Train and Test  ####################
