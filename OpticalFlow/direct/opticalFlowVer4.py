@@ -25,7 +25,8 @@ target_date = "2022-05-30"
 # 該当ファイルの時刻を手入力（テスト用）
 # ImageData =["14-06-46", "16-05-07"]
 # ImageData =["14-36-37"]
-ImageData =["13-38-15", "14-24-32", "15-26-11", "16-05-07", "16-31-03", "17-11-41"]
+ImageData =["12-31-26"]
+# ImageData =["13-38-15", "14-24-32", "15-26-11", "16-05-07", "16-31-03", "17-11-41"]
 ################################################################
 
 #######################  Make Parameters  ######################
@@ -89,9 +90,9 @@ def OpticalFlow(t_path, i_s_path, p):
   frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # 900
   frame_rate = int(cap.get(cv2.CAP_PROP_FPS)) # 30
 
-  # for save
-  fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-  save = cv2.VideoWriter(i_s_path, fmt, frame_rate, size)
+  # # for save
+  # fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+  # save = cv2.VideoWriter(i_s_path, fmt, frame_rate, size)
 
   # 最初のフレームを取得してグレースケール変換
   ret, frame = cap.read()
@@ -164,7 +165,7 @@ def OpticalFlow(t_path, i_s_path, p):
       x2, y2 = pt2.ravel() # 2フレーム目の特徴点座標
 
       # 軌跡を描画（過去の軌跡も残すためにmaskに描く）
-      mask = cv2.line(mask, (int(x1), int(y1)), (int(x2), int(y2)), [0, 0, 200], 1)
+      mask = cv2.line(mask, (int(x1), int(y1)), (int(x2), int(y2)), [128, 128, 128], 1)
 
       # 現フレームにオプティカルフローを描画
       frame = cv2.circle(frame, (int(x2), int(y2)), 5, [0, 0, 200], -1)
@@ -175,8 +176,8 @@ def OpticalFlow(t_path, i_s_path, p):
     # ウィンドウに表示
     cv2.imshow('mask', img)
     
-    # save per frame
-    save.write(img)
+    # # save per frame
+    # save.write(img)
 
     # 次のフレーム、ポイントの準備
     frame_pre = frame_now.copy() # 次のフレームを最初のフレームに設定
@@ -206,7 +207,7 @@ def OpticalFlow(t_path, i_s_path, p):
   # 終了処理
   cv2.destroyAllWindows()
   cap.release()
-  save.release()
+  # save.release()
 
   return position_all
 ################################################################
@@ -240,6 +241,6 @@ for i, id in enumerate(ImageData):
 
 print("Position_All: " + str(Position_All.shape))
 # 全画像における特徴点の座標を保存
-np.save(position_save_path, Position_All)
+# np.save(position_save_path, Position_All)
 
 ################################################################

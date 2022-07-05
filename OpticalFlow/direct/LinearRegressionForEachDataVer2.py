@@ -4,7 +4,8 @@
 # Ver2: Wを修正(1, 100) そのためにAnalysis()を修正
 # Ver2: 訓練データを含む全データでテストを行うX_test = X
 # Ver2: 12パターンでループ
-# Ver2: 
+# Ver2: 特徴点の動作をチェックする関数作成 CheckFeature()
+# Ver2: 特徴点にハイパスフィルタをかける HighpassFilter()
 
 
 import numpy as np
@@ -12,6 +13,8 @@ import os
 import matplotlib.pyplot as plt
 from datetime import datetime
 import csv
+import cv2
+from matplotlib.animation import ArtistAnimation
 
 #####################  Path and Parameter  ###########################
 # 使用するUSデータの形状
@@ -127,11 +130,62 @@ def Calc_R2andRMSE(theta, theta_pred, T):
     writer.writerow([RMSE, R2])
 #####################################################################
 
+########################  Check Feature  ###########################
+def CheckFeature(n):
+  feature_path = target_path + "FeaturePointsData.npy"
+  feature_data = np.load(feature_path)
+  feature_data = feature_data[:n, :, :100]
+  feature_data = feature_data.reshape([n, feature_data.shape[1], 50, 2]) # (3, 898, 50, 2)
+  # print(feature_data[0, 0])
+  gonio_data_path = target_path + "gonioData.npy"
+  gonio_data = np.load(gonio_data_path)
+  gonio_data = gonio_data[:n, :, ] # (3, 898, 1)
+
+  height = 480
+  width = 640
+  # img = np.full((height, width, 3), 0, np.uint8)
+  mask = np.zeros((height, width, 3), np.uint8)
+  # for save
+  fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+  save = cv2.VideoWriter("test.mp4", fmt, 30, (width, height))
+
+  feature_pre = feature_data[0, 0]
+  for t in range(feature_data.shape[1]):
+    if t+1 == feature_data.shape[1]:
+      break
+    img = np.zeros((height, width, 3), np.uint8)
+    gonio_now = round(gonio_data[0, t, 0], 2)
+    feature_now = feature_data[0, t+1]
+
+    for i in range(feature_data.shape[2]):
+    # for i in range(10):
+      mask = cv2.line(mask, (int(feature_pre[i][0]), int(feature_pre[i][1])), (int(feature_now[i][0]), int(feature_now[i][1])), [128, 128, 128], 1)
+      img = cv2.circle(img, (int(feature_now[i][0]), int(feature_now[i][1])), 5, [0, 0, 200], -1)
+
+    # テキストデータ描画
+    angle_data = "Wrist Angle: " + str(gonio_now)
+    org = (5, 400)
+    cv2.putText(img, angle_data, org, fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=1.0, color=(255, 255, 255))
+
+    image = cv2.add(img, mask)
+    # cv2.imshow("mask", image)
+    save.write(image)
+
+    feature_pre = feature_now
+  
+  cv2.destroyAllWindows()
+  exit()
+
+#####################################################################
+
 #############################  Main  ################################
 for p in range(patern_num):
   patern = p + 1
   result_path = MakeResultsPath(patern)
   print("-----Patern" + str(patern) + "-----\n")
+
+  # 特徴点の再描画 + 関節角度
+  # CheckFeature(3)
 
   Xs, Thetas = ReadData() # (10, 898, 100), (10, 898, 1)
   T = Xs.shape[1]
