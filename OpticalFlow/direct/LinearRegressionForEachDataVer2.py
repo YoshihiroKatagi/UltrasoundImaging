@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import csv
 import cv2
-from matplotlib.animation import ArtistAnimation
+from scipy import signal
 
 #####################  Path and Parameter  ###########################
 # 使用するUSデータの形状
@@ -131,39 +131,30 @@ def Calc_R2andRMSE(theta, theta_pred, T):
 #####################################################################
 
 ########################  Check Feature  ###########################
-def CheckFeature(n):
-  feature_path = target_path + "FeaturePointsData.npy"
-  feature_data = np.load(feature_path)
-  feature_data = feature_data[:n, :, :100]
-  feature_data = feature_data.reshape([n, feature_data.shape[1], 50, 2]) # (3, 898, 50, 2)
-  # print(feature_data[0, 0])
-  gonio_data_path = target_path + "gonioData.npy"
-  gonio_data = np.load(gonio_data_path)
-  gonio_data = gonio_data[:n, :, ] # (3, 898, 1)
+def CheckFeature(x, theta): # (898, 100), (898, 1)
+  x = x.reshape([x.shape[0], x.shape[1]//2, 2]) # (898, 50, 2)
 
   height = 480
   width = 640
-  # img = np.full((height, width, 3), 0, np.uint8)
   mask = np.zeros((height, width, 3), np.uint8)
   # for save
   fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
   save = cv2.VideoWriter("test.mp4", fmt, 30, (width, height))
 
-  feature_pre = feature_data[0, 0]
-  for t in range(feature_data.shape[1]):
-    if t+1 == feature_data.shape[1]:
+  x_pre = x[0]  # (50, 2)
+  for t in range(x.shape[0]):
+    if t+1 == x.shape[0]:
       break
     img = np.zeros((height, width, 3), np.uint8)
-    gonio_now = round(gonio_data[0, t, 0], 2)
-    feature_now = feature_data[0, t+1]
+    x_now = x[t+1]  # (50, 2)
+    theta_now = round(theta[t, 0], 2)
 
-    for i in range(feature_data.shape[2]):
-    # for i in range(10):
-      mask = cv2.line(mask, (int(feature_pre[i][0]), int(feature_pre[i][1])), (int(feature_now[i][0]), int(feature_now[i][1])), [128, 128, 128], 1)
-      img = cv2.circle(img, (int(feature_now[i][0]), int(feature_now[i][1])), 5, [0, 0, 200], -1)
+    for i in range(x.shape[1]):
+      mask = cv2.line(mask, (int(x_pre[i][0]), int(x_pre[i][1])), (int(x_now[i][0]), int(x_now[i][1])), [128, 128, 128], 1)
+      img = cv2.circle(img, (int(x_now[i][0]), int(x_now[i][1])), 5, [0, 0, 200], -1)
 
     # テキストデータ描画
-    angle_data = "Wrist Angle: " + str(gonio_now)
+    angle_data = "Wrist Angle: " + str(theta_now)
     org = (5, 400)
     cv2.putText(img, angle_data, org, fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=1.0, color=(255, 255, 255))
 
@@ -171,11 +162,48 @@ def CheckFeature(n):
     # cv2.imshow("mask", image)
     save.write(image)
 
-    feature_pre = feature_now
+    x_pre = x_now
   
   cv2.destroyAllWindows()
   exit()
+#####################################################################
 
+########################  HighpassFilter  ###########################
+samplerate = 25600
+# x = np.arange(0, 12800) / samplerate
+# data = np.random.normal(loc=0, scale=1, size=len(x))
+
+fp = 3000
+fs = 1500
+gpass = 3
+gstop = 40
+
+def HighpassFilter(data, samplerate, fp, fs, gpass, gstop):
+  fn = samplerate / 2                           # ナイキスト周波数
+  wp = fp / fn                                  # ナイキスト周波数で通過域端周波数を正規化
+  ws = fs / fn                                  # ナイキスト周波数で阻止域端周波数を正規化
+  N, Wn = signal.buttord(wp, ws, gpass, gstop)  # オーダーとバターワースの正規化周波数を計算
+  b, a = signal.butter(N, Wn, "high")           # フィルタ伝達関数の分子と分母を計算
+
+  data = data.reshape([data.shape[0], data.shape[1]//2, 2]) # (898, 50, 2)
+
+  all_data = np.empty([data.shape[0], 0])
+
+  for i in range(data.shape[1]):
+    x = data[:, i, 0].reshape([data.shape[0],])
+    y = data[:, i, 1].reshape([data.shape[0],])
+    x = signal.filtfilt(b, a, x)                  # 信号に対してフィルタをかける
+    y = signal.filtfilt(b, a, y)
+
+    x, y = x.reshape([x.shape[0], 1]), y.reshape([y.shape[0], 1])
+
+    filtered_data = np.append(x, y, axis=1) # (898, 2)
+    all_data = np.append(all_data, filtered_data, axis=1)
+  # print(all_data[0])
+  exit()
+
+  y = signal.filtfilt(b, a, data)
+  return y
 #####################################################################
 
 #############################  Main  ################################
@@ -184,9 +212,6 @@ for p in range(patern_num):
   result_path = MakeResultsPath(patern)
   print("-----Patern" + str(patern) + "-----\n")
 
-  # 特徴点の再描画 + 関節角度
-  # CheckFeature(3)
-
   Xs, Thetas = ReadData() # (10, 898, 100), (10, 898, 1)
   T = Xs.shape[1]
   for i in range(10):
@@ -194,6 +219,17 @@ for p in range(patern_num):
     print("--test" + str(test_num) + "--")
 
     X, Theta = Xs[i], Thetas[i] # (898, 100), (898, 1)
+    # print(X[0])
+    
+    # ハイパスフィルタ
+    # data_filt = HighpassFilter(X, samplerate, fp, fs, gpass, gstop)
+    # exit()
+
+    # 特徴点及び関節角度の描画
+    if patern == 1 and i == 4:
+      CheckFeature(X, Theta)
+      exit()
+
     X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(X, Theta) # (718, 100), (718, 1), (898, 100), (898, 1)
     W = Analysis(X_train, Theta_train) # (100, 1)
 
@@ -201,4 +237,5 @@ for p in range(patern_num):
 
     Visualize(Theta_test, Theta_pred, test_num)
     Calc_R2andRMSE(Theta_test, Theta_pred, T)
+  # exit()
 #####################################################################
