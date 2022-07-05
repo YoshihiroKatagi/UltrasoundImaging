@@ -6,6 +6,7 @@
 # Ver2: 12パターンでループ
 # Ver2: 特徴点の動作をチェックする関数作成 CheckFeature()
 # Ver2: 特徴点にハイパスフィルタをかける HighpassFilter()
+# Ver2: ハイパスフィルタチェック用のグラフ XYgraph()
 
 
 import numpy as np
@@ -98,7 +99,7 @@ def Visualize(y, y_pred, n):
 
   fig2 = plt.figure()
   plt.title("scatter plot")
-  plt.scatter(y, y_pred)
+  plt.scatter(y[718:], y_pred[718:])
   fig2.savefig(result_path + "/scatter" + str(n) + ".png")
 
   # plt.show()
@@ -121,7 +122,7 @@ def Calc_R2andRMSE(theta, theta_pred, T):
     return RMSE
 
   RMSE = _RMSE(theta, theta_pred, T)
-  R2 = _R2(theta, theta_pred)
+  R2 = _R2(theta[718:], theta_pred[718:])
   print("RMSE = " + str(RMSE))
   print("相関係数: " + str(R2) + "\n")
 
@@ -165,13 +166,13 @@ def CheckFeature(x, theta): # (898, 100), (898, 1)
     x_pre = x_now
   
   cv2.destroyAllWindows()
-  exit()
 #####################################################################
 
 ########################  HighpassFilter  ###########################
 samplerate = 25600
+# samplerate = 1796
 # x = np.arange(0, 12800) / samplerate
-# data = np.random.normal(loc=0, scale=1, size=len(x))
+# data = np.random.normal(loc=0, scale=1, size=len(x)) # (12800,)
 
 fp = 3000
 fs = 1500
@@ -198,12 +199,45 @@ def HighpassFilter(data, samplerate, fp, fs, gpass, gstop):
     x, y = x.reshape([x.shape[0], 1]), y.reshape([y.shape[0], 1])
 
     filtered_data = np.append(x, y, axis=1) # (898, 2)
-    all_data = np.append(all_data, filtered_data, axis=1)
-  # print(all_data[0])
-  exit()
+    all_data = np.append(all_data, filtered_data, axis=1) # (898, 100)
 
-  y = signal.filtfilt(b, a, data)
-  return y
+  return all_data
+#####################################################################
+
+###########################  XY Graph  ##############################
+def XYgraph(X, iter):
+  X = X.reshape([X.shape[0], X.shape[1]//2, 2]) # (898, 50, 2)
+  t = np.arange(X.shape[0])
+  for i in iter:
+    x = X[:, i, 0]
+    y = X[:, i, 1]
+
+    fig1 = plt.figure()
+    plt.title("x-t graph")
+    plt.xlabel("Time")
+    plt.ylabel("x")
+    plt.plot(t, x, color="cornflowerblue", linewidth=2, label = "Feature No." + str(i+1) + " of x")
+    plt.ylim(0, 640)
+    # plt.ylim(-30, 30) # ハイパスフィルタ用
+    plt.xlim(0, x.shape[0])
+    plt.legend(loc="upper left", fontsize=10)
+    plt.grid(True)
+    fig1.savefig("Feature_No." + str(i+1) + "_x-t" + ".png")
+
+    fig2 = plt.figure()
+    plt.title("y-t graph")
+    plt.xlabel("Time")
+    plt.ylabel("y")
+    plt.plot(t, y, color="cornflowerblue", linewidth=2, label = "Feature No." + str(i+1) + " of y")
+    plt.ylim(0, 480)
+    # plt.ylim(-30, 30) # ハイパスフィルタ用
+    plt.xlim(0, y.shape[0])
+    plt.legend(loc="upper left", fontsize=10)
+    plt.grid(True)
+    fig2.savefig("Feature_No." + str(i+1) + "_y-t" + ".png")
+
+    # plt.show()
+    plt.close()
 #####################################################################
 
 #############################  Main  ################################
@@ -219,16 +253,24 @@ for p in range(patern_num):
     print("--test" + str(test_num) + "--")
 
     X, Theta = Xs[i], Thetas[i] # (898, 100), (898, 1)
-    # print(X[0])
+
+    # # グラフ化
+    # iter = [0, 9, 29]
+    # XYgraph(X, iter)
+    # exit()
     
     # ハイパスフィルタ
-    # data_filt = HighpassFilter(X, samplerate, fp, fs, gpass, gstop)
+    # X = HighpassFilter(X, samplerate, fp, fs, gpass, gstop)
+
+    # # グラフ化
+    # iter = [0, 9, 29]
+    # XYgraph(X, iter)
     # exit()
 
     # 特徴点及び関節角度の描画
-    if patern == 1 and i == 4:
+    if patern == 1 and i == 0:
       CheckFeature(X, Theta)
-      exit()
+      # exit()
 
     X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(X, Theta) # (718, 100), (718, 1), (898, 100), (898, 1)
     W = Analysis(X_train, Theta_train) # (100, 1)
