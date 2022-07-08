@@ -169,15 +169,17 @@ def CheckFeature(x, theta): # (898, 100), (898, 1)
 #####################################################################
 
 ########################  HighpassFilter  ###########################
-samplerate = 25600
-# samplerate = 1796
+# samplerate = 25600 # 波形のサンプリングレート
+samplerate = 30
 # x = np.arange(0, 12800) / samplerate
 # data = np.random.normal(loc=0, scale=1, size=len(x)) # (12800,)
 
-fp = 3000
-fs = 1500
-gpass = 3
-gstop = 40
+# fp = 3000          # 通過域端周波数[Hz]
+fp = 0.04
+# fs = 1500          # 阻止域端周波数[Hz]
+fs = 0.02
+gpass = 3            # 通過域端最大損失[dB]
+gstop = 40           # 阻止域端最大損失[dB]
 
 def HighpassFilter(data, samplerate, fp, fs, gpass, gstop):
   fn = samplerate / 2                           # ナイキスト周波数
@@ -191,21 +193,21 @@ def HighpassFilter(data, samplerate, fp, fs, gpass, gstop):
   all_data = np.empty([data.shape[0], 0])
 
   for i in range(data.shape[1]):
-    x = data[:, i, 0].reshape([data.shape[0],])
-    y = data[:, i, 1].reshape([data.shape[0],])
+    x = data[:, i, 0].reshape([data.shape[0],]) # (898,)
+    y = data[:, i, 1].reshape([data.shape[0],]) # (898,)
     x = signal.filtfilt(b, a, x)                  # 信号に対してフィルタをかける
     y = signal.filtfilt(b, a, y)
 
     x, y = x.reshape([x.shape[0], 1]), y.reshape([y.shape[0], 1])
 
     filtered_data = np.append(x, y, axis=1) # (898, 2)
-    all_data = np.append(all_data, filtered_data, axis=1) # (898, 100)
+    all_data = np.append(all_data, filtered_data, axis=1)
 
-  return all_data
+  return all_data # (898, 100)
 #####################################################################
 
 ###########################  XY Graph  ##############################
-def XYgraph(X, iter):
+def XYgraph(X, iter, flag):
   X = X.reshape([X.shape[0], X.shape[1]//2, 2]) # (898, 50, 2)
   t = np.arange(X.shape[0])
   for i in iter:
@@ -217,24 +219,34 @@ def XYgraph(X, iter):
     plt.xlabel("Time")
     plt.ylabel("x")
     plt.plot(t, x, color="cornflowerblue", linewidth=2, label = "Feature No." + str(i+1) + " of x")
-    plt.ylim(0, 640)
-    # plt.ylim(-30, 30) # ハイパスフィルタ用
+    if flag == "filtered":
+      plt.ylim(-30, 30) # ハイパスフィルタ用
+    else:
+      plt.ylim(0, 640)
     plt.xlim(0, x.shape[0])
     plt.legend(loc="upper left", fontsize=10)
     plt.grid(True)
-    fig1.savefig("Feature_No." + str(i+1) + "_x-t" + ".png")
+    if flag == "filtered":
+      fig1.savefig("Feature_No." + str(i+1) + "_x-t" + "_filtered" + ".png")
+    else:
+      fig1.savefig("Feature_No." + str(i+1) + "_x-t" + ".png")
 
     fig2 = plt.figure()
     plt.title("y-t graph")
     plt.xlabel("Time")
     plt.ylabel("y")
     plt.plot(t, y, color="cornflowerblue", linewidth=2, label = "Feature No." + str(i+1) + " of y")
-    plt.ylim(0, 480)
-    # plt.ylim(-30, 30) # ハイパスフィルタ用
+    if flag == "filtered":
+      plt.ylim(-30, 30) # ハイパスフィルタ用
+    else:
+      plt.ylim(0, 640)
     plt.xlim(0, y.shape[0])
     plt.legend(loc="upper left", fontsize=10)
     plt.grid(True)
-    fig2.savefig("Feature_No." + str(i+1) + "_y-t" + ".png")
+    if flag == "filtered":
+      fig2.savefig("Feature_No." + str(i+1) + "_y-t" + "_filtered" + ".png")
+    else:
+      fig2.savefig("Feature_No." + str(i+1) + "_y-t" + ".png")
 
     # plt.show()
     plt.close()
@@ -254,23 +266,23 @@ for p in range(patern_num):
 
     X, Theta = Xs[i], Thetas[i] # (898, 100), (898, 1)
 
-    # # グラフ化
-    # iter = [0, 9, 29]
-    # XYgraph(X, iter)
-    # exit()
+    # グラフ化
+    iter = [0, 9, 29]
+    f = "nonfiltered"
+    XYgraph(X, iter, f)
     
     # ハイパスフィルタ
-    # X = HighpassFilter(X, samplerate, fp, fs, gpass, gstop)
+    X = HighpassFilter(X, samplerate, fp, fs, gpass, gstop)
 
-    # # グラフ化
-    # iter = [0, 9, 29]
-    # XYgraph(X, iter)
+    # グラフ化
+    f = "filtered"
+    XYgraph(X, iter, f)
     # exit()
 
-    # 特徴点及び関節角度の描画
-    if patern == 1 and i == 0:
-      CheckFeature(X, Theta)
-      # exit()
+    # # 特徴点及び関節角度の描画
+    # if patern == 1 and i == 4:
+    #   CheckFeature(X, Theta)
+    #   exit()
 
     X_train, Theta_train, X_test, Theta_test = DivideIntoTrainAndTest(X, Theta) # (718, 100), (718, 1), (898, 100), (898, 1)
     W = Analysis(X_train, Theta_train) # (100, 1)
@@ -279,5 +291,6 @@ for p in range(patern_num):
 
     Visualize(Theta_test, Theta_pred, test_num)
     Calc_R2andRMSE(Theta_test, Theta_pred, T)
-  # exit()
+    # exit()
+  exit()
 #####################################################################
