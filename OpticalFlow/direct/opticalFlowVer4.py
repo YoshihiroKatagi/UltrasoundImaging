@@ -10,6 +10,7 @@ import os
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
+from pyrsistent import v
 
 ### ※Execute directly under this file
 
@@ -18,15 +19,24 @@ import matplotlib.pyplot as plt
 target_date = "2022-05-30"
 # target_date = datetime.now().strftime("%Y-%m-%d")
 
-# # 使用する超音波画像のファイル名一覧をリストで取得
-# image_path = "./dataset/" + target_date + "/ultrasoundImage/before"
-# ImageData = os.listdir(image_path)
+# 使用する超音波画像のファイル名一覧をリストで取得
+image_path = "./dataset/" + target_date + "/ultrasoundImage/before"
+ImageData = os.listdir(image_path)
 
 # 該当ファイルの時刻を手入力（テスト用）
-# ImageData =["14-06-46", "16-05-07"]
-# ImageData =["14-36-37"]
-ImageData =["12-31-26"]
+# ImageData =["12-31-26"]
 # ImageData =["13-38-15", "14-24-32", "15-26-11", "16-05-07", "16-31-03", "17-11-41"]
+
+# ゴニオメータの計測データのファイルパス
+gonio_path = "./dataset/" + target_date + "/forMachineLearning/"
+################################################################
+
+########################  Read Gonio  ##########################
+def ReadGonio():
+  gonio_data_path = gonio_path + "gonioData.npy"
+  gonio_data = np.load(gonio_data_path)
+
+  return gonio_data
 ################################################################
 
 #######################  Make Parameters  ######################
@@ -55,7 +65,7 @@ def MakeFigure(c):
 
 #####################  Check PositionAll  ######################
 # 特徴点の除外が正しくできているかの確認
-# （position_all = np.delete(position_all, v - i, 1)　の確認）
+# （position_all = np.delete(position_all, v - i, 1)　の部分の確認）
 def CheckPositionAll(p_a, n):
   x = p_a[:, n, 0]
   y = p_a[:, n, 1]
@@ -192,7 +202,7 @@ def OpticalFlow(t_path, i_s_path, p):
   last_num = good2.shape[0]
   print("last: " + str(last_num))
   proportion = last_num/first_num * 100
-  print("proportion: {:.1f}".format(proportion))
+  print("proportion: {:.1f}/n".format(proportion))
 
   # for i in range(10):
   #   n = i * 10
@@ -201,8 +211,7 @@ def OpticalFlow(t_path, i_s_path, p):
 
   position_all = np.delete(position_all, np.s_[100:], 1) # (898, 100, 2)
   # MakeFigure(position_all)
-  position_all = position_all.reshape([1, position_all.shape[0], position_all.shape[1] * 2])
-  print("position_all: " + str(position_all.shape) + "\n") # (1, 898, 200)
+  position_all = position_all.reshape([1, position_all.shape[0], position_all.shape[1] * 2]) # (1, 898, 200)
 
   # 終了処理
   cv2.destroyAllWindows()
@@ -212,15 +221,95 @@ def OpticalFlow(t_path, i_s_path, p):
   return position_all
 ################################################################
 
+###################  Save Proccessed Image  ####################
+def SaveProccessedImage(t_path, i_s_path, points, theta):
+  points = points[:, :, :100].reshape([points.shape[1], 50, 2]) # (898, 50, 2)
+  cap = cv2.VideoCapture(t_path)
+
+  # #properties
+  height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+  width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+  size = (width, height)  # (640, 480)
+  frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # 900
+  frame_rate = int(cap.get(cv2.CAP_PROP_FPS)) # 30
+
+  # for save
+  fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+  save = cv2.VideoWriter(i_s_path, fmt, frame_rate, size)
+
+  # 最初のフレームを取得
+  ret, frame = cap.read()
+  # frame_pre = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+  # mask用の配列を生成
+  mask = np.zeros_like(frame)
+
+  # 最初の特徴点の座標を取得
+  points_pre = points[0] # (50, 2)
+  # 動画終了まで繰り返し
+  for t in range(points.shape[0]):
+    if t+1 == points.shape[0]:
+      break
+    
+    # 現在のフレームを取得
+    ret, frame = cap.read()
+    if ret == False:
+      break
+    # frame_now = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # 現在の特徴点の座標を取得
+    points_now = points[t+1]
+
+    # 現在の関節角度を取得
+    theta_now = round(theta[t, 0], 2)
+
+    # オプティカルフローと現在の特徴点をmask, frameに描画
+    for p_pre, p_now in zip(points_pre, points_now):
+      x1, y1 = p_pre[0], p_pre[1]
+      x2, y2 = p_now[0], p_now[1]
+
+      mask = cv2.line(mask, (int(x1), int(y1)), (int(x2), int(y2)), [128, 128, 128], 1)
+      frame = cv2.circle(frame, (int(x2), int(y2)), 5, [0, 0, 200], -1)
+
+      # 関節角度情報を描画
+      angle = "Wrist Angle: " + str(theta_now)
+      org = (20, 460) # 挿入する座標
+      cv2.putText(frame, angle, org, fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=0.5, color=(255, 255, 255))
+
+    # frameとmaskの合成
+    img = cv2.add(frame, mask)
+
+    # ウィンドウに表示
+    cv2.imshow("mask", img)
+
+    # フレームごとに保存
+    save.write(img)
+
+    # pointsの更新
+    points_pre = points_now
+
+    # qキーが押されたら途中終了
+    if cv2.waitKey(30) & 0xFF == ord('p'):
+      break
+
+  # 終了処理
+  cv2.destroyAllWindows()
+  cap.release()
+  save.release()
+################################################################
+
 ###########################  Main  #############################
-# パラメータ固定（本番）
+# 本番用（基本こっち）
 Parameters = [0]
-# パラメータlist作成（最適なパラメータを見つける）(MakeParameters()を調整する)
+# パラメータ調整用　(MakeParameters()を調整する)
 # Parameters = MakeParameters(1, 4, 1, 1)
+
+Gonio_data = ReadGonio() # (120, 898, 1)
 
 # 画像ごとにOpticalFlow()を実行
 for i, id in enumerate(ImageData):
   target_image = os.path.splitext(id)[0]
+  Theta = Gonio_data[i]
 
   target_directry = "./dataset/" + target_date + "/ultrasoundImage"
   target_path = target_directry + "/before/" + target_image + ".mp4"
@@ -230,11 +319,15 @@ for i, id in enumerate(ImageData):
     os.makedirs(forML_folder)
   position_save_path = forML_folder + "FeaturePointsData"
 
-  print("-----Target Image: " + str(id) + "-----")
+  print("-----Target Image: " + "No." + str(i) + " " + str(id) + "-----")
 
   for p in Parameters:
     print("---param: " + str(p) + "---")
     Position_by_Image = OpticalFlow(target_path, image_save_path, p) # (1, 898, 200)
+
+    # 50個の特徴点とその時の関節角度をUS画像に描画
+    SaveProccessedImage(target_path, image_save_path, Position_by_Image, Theta)
+
     if i == 0:
       Position_All = np.empty([0, Position_by_Image.shape[1], Position_by_Image.shape[2]])
     Position_All = np.append(Position_All, Position_by_Image, axis=0) # (120, 898, 200)

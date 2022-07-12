@@ -108,8 +108,8 @@ def Visualize(y, y_pred, n):
 
 ########################  Calc_R2andRMSE  ###########################
 def Calc_R2andRMSE(theta, theta_pred, T):
-  theta = theta.reshape(-1)
-  theta_pred = theta_pred.reshape(-1)
+  theta = theta.reshape(-1)[718:]
+  theta_pred = theta_pred.reshape(-1)[718:]
 
   def _R2(theta, theta_pred):
     corrcoef = np.corrcoef(theta, theta_pred)
@@ -122,13 +122,50 @@ def Calc_R2andRMSE(theta, theta_pred, T):
     return RMSE
 
   RMSE = _RMSE(theta, theta_pred, T)
-  R2 = _R2(theta[718:], theta_pred[718:])
+  R2 = _R2(theta, theta_pred)
   print("RMSE = " + str(RMSE))
   print("相関係数: " + str(R2) + "\n")
 
   with open(result_path + "/R2andRMSE.csv", "a") as f:
     writer = csv.writer(f)
     writer.writerow([RMSE, R2])
+#####################################################################
+
+########################  Check Feature  ###########################
+def CheckFeature(x, theta): # (898, 100), (898, 1)
+  x = x.reshape([x.shape[0], x.shape[1]//2, 2]) # (898, 50, 2)
+
+  height = 480
+  width = 640
+  mask = np.zeros((height, width, 3), np.uint8)
+  # for save
+  fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+  save = cv2.VideoWriter("test.mp4", fmt, 30, (width, height))
+
+  x_pre = x[0]  # (50, 2)
+  for t in range(x.shape[0]):
+    if t+1 == x.shape[0]:
+      break
+    img = np.zeros((height, width, 3), np.uint8)
+    x_now = x[t+1]  # (50, 2)
+    theta_now = round(theta[t, 0], 2)
+
+    for i in range(x.shape[1]):
+      mask = cv2.line(mask, (int(x_pre[i][0]), int(x_pre[i][1])), (int(x_now[i][0]), int(x_now[i][1])), [128, 128, 128], 1)
+      img = cv2.circle(img, (int(x_now[i][0]), int(x_now[i][1])), 5, [0, 0, 200], -1)
+
+    # テキストデータ描画
+    angle_data = "Wrist Angle: " + str(theta_now)
+    org = (5, 400)
+    cv2.putText(img, angle_data, org, fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=1.0, color=(255, 255, 255))
+
+    image = cv2.add(img, mask)
+    # cv2.imshow("mask", image)
+    save.write(image)
+
+    x_pre = x_now
+  
+  cv2.destroyAllWindows()
 #####################################################################
 
 ########################  Check Feature  ###########################
@@ -259,7 +296,8 @@ for p in range(patern_num):
   print("-----Patern" + str(patern) + "-----\n")
 
   Xs, Thetas = ReadData() # (10, 898, 100), (10, 898, 1)
-  T = Xs.shape[1]
+  # T = Xs.shape[1]
+  T = 180
   for i in range(10):
     test_num = i + 1
     print("--test" + str(test_num) + "--")
