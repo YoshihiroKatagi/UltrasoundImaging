@@ -26,7 +26,7 @@ save_path = save_folder + "/before/" + date + ".mp4"
 # 録画時間[s]
 time = 30
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1) # 0 or 1
 
 #properties
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

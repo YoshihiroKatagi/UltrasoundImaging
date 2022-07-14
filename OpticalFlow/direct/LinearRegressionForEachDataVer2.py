@@ -7,6 +7,7 @@
 # Ver2: 特徴点の動作をチェックする関数作成 CheckFeature()
 # Ver2: 特徴点にハイパスフィルタをかける HighpassFilter()
 # Ver2: ハイパスフィルタチェック用のグラフ XYgraph()
+# Ver2: 相関係数を決定係数に変更
 
 
 import numpy as np
@@ -16,6 +17,7 @@ from datetime import datetime
 import csv
 import cv2
 from scipy import signal
+from sklearn.metrics import r2_score
 
 #####################  Path and Parameter  ###########################
 # 使用するUSデータの形状
@@ -40,9 +42,9 @@ def MakeResultsPath(patern):
   if not os.path.exists(result_path):
     os.makedirs(result_path)
 
-  with open(result_path + "/R2andRMSE.csv", "w") as f:
+  with open(result_path + "/RMSEandR2_P" + str(patern) + ".csv", "w") as f:
     writer = csv.writer(f)
-    writer.writerow(["RMSE", "R2"])
+    writer.writerow(["RMSE", "R2", "coeff"])
   
   return result_path
 #####################################################################
@@ -80,38 +82,42 @@ def Analysis(x, theta): #x: (718, 100), theta: (718, 1)
 
 ###########################  Visualize  #############################
 def Visualize(y, y_pred, n):
-  x = np.arange(y.shape[0])
+  x = np.arange(y.shape[0])/30 # T:0 ~ 30に変更
   y = y.reshape(-1) # (898,)
   y_pred = y_pred.reshape(-1) # (898,)
 
   fig1 = plt.figure()
-  plt.title("Wrist angle")
-  plt.xlabel("Time")
-  plt.ylabel("angle")
+  # plt.title("A result of estimating wrist joint angle", fontsize=18)
+  plt.xlabel("Time [s]", fontsize=20)
+  plt.ylabel("Wrist angle [deg]", fontsize=20)
   plt.plot(x, y_pred, color="cornflowerblue", linewidth=2, label="Estimated angle")
   plt.plot(x, y, color="tomato", linewidth=2, label="Measured angle")
-  plt.vlines(718, -80, 30, "gray", linestyles="dashed")
+  plt.vlines(718/30, -80, 30, "gray", linestyles="dashed")
   plt.ylim(-80, 30) #extensor
-  plt.xlim(0, y.shape[0])
-  plt.legend(loc="upper left", fontsize=10)
+  plt.xlim(0, y.shape[0]/30)
+  plt.legend(loc="upper left", fontsize=16)
   plt.grid(True)
+  plt.tight_layout()
   fig1.savefig(result_path + "/plot" + str(n) + ".png")
 
   fig2 = plt.figure()
-  plt.title("scatter plot")
+  # plt.title("Scatter plots of estimated and measured angle", fontsize=16)
+  plt.xlabel("Measured angle [deg]", fontsize=20)
+  plt.ylabel("Estimated angle [deg]", fontsize=20)
   plt.scatter(y[718:], y_pred[718:])
+  plt.tight_layout()
   fig2.savefig(result_path + "/scatter" + str(n) + ".png")
 
   # plt.show()
   plt.close()
 #####################################################################
 
-########################  Calc_R2andRMSE  ###########################
-def Calc_R2andRMSE(theta, theta_pred, T):
-  theta = theta.reshape(-1)[718:]
-  theta_pred = theta_pred.reshape(-1)[718:]
+########################  Calc_RMSEandR2  ###########################
+def Calc_RMSEandR2(theta, theta_pred, T):
+  theta = theta.reshape(-1)[718:] # (180, )
+  theta_pred = theta_pred.reshape(-1)[718:] # (180, )
 
-  def _R2(theta, theta_pred):
+  def _coeff(theta, theta_pred):
     corrcoef = np.corrcoef(theta, theta_pred)
     corrcoef = corrcoef[0][1]
     return corrcoef
@@ -122,13 +128,15 @@ def Calc_R2andRMSE(theta, theta_pred, T):
     return RMSE
 
   RMSE = _RMSE(theta, theta_pred, T)
-  R2 = _R2(theta, theta_pred)
+  R2 = r2_score(theta, theta_pred)
+  coeff = _coeff(theta, theta_pred)
   print("RMSE = " + str(RMSE))
-  print("相関係数: " + str(R2) + "\n")
+  print("決定係数 R2 = " + str(R2))
+  print("相関係数: " + str(coeff) + "\n")
 
-  with open(result_path + "/R2andRMSE.csv", "a") as f:
+  with open(result_path + "/RMSEandR2_P" + str(patern) + ".csv", "a") as f:
     writer = csv.writer(f)
-    writer.writerow([RMSE, R2])
+    writer.writerow([RMSE, R2, coeff])
 #####################################################################
 
 ########################  Check Feature  ###########################
@@ -297,25 +305,25 @@ for p in range(patern_num):
 
   Xs, Thetas = ReadData() # (10, 898, 100), (10, 898, 1)
   # T = Xs.shape[1]
-  T = 180
+  T = 180 # 要修正
   for i in range(10):
     test_num = i + 1
     print("--test" + str(test_num) + "--")
 
     X, Theta = Xs[i], Thetas[i] # (898, 100), (898, 1)
 
-    # グラフ化
-    iter = [0, 9, 29]
-    f = "nonfiltered"
-    XYgraph(X, iter, f)
+    # # グラフ化
+    # iter = [0, 9, 29]
+    # f = "nonfiltered"
+    # XYgraph(X, iter, f)
     
-    # ハイパスフィルタ
-    X = HighpassFilter(X, samplerate, fp, fs, gpass, gstop)
+    # # ハイパスフィルタ
+    # X = HighpassFilter(X, samplerate, fp, fs, gpass, gstop)
 
-    # グラフ化
-    f = "filtered"
-    XYgraph(X, iter, f)
-    # exit()
+    # # グラフ化
+    # f = "filtered"
+    # XYgraph(X, iter, f)
+    # # exit()
 
     # # 特徴点及び関節角度の描画
     # if patern == 1 and i == 4:
@@ -328,7 +336,7 @@ for p in range(patern_num):
     Theta_pred = np.dot(X_test, W) # (898, 1)
 
     Visualize(Theta_test, Theta_pred, test_num)
-    Calc_R2andRMSE(Theta_test, Theta_pred, T)
+    Calc_RMSEandR2(Theta_test, Theta_pred, T)
     # exit()
   exit()
 #####################################################################
