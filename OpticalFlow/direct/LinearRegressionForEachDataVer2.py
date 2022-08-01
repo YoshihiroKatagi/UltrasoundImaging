@@ -176,43 +176,6 @@ def CheckFeature(x, theta): # (898, 100), (898, 1)
   cv2.destroyAllWindows()
 #####################################################################
 
-########################  Check Feature  ###########################
-def CheckFeature(x, theta): # (898, 100), (898, 1)
-  x = x.reshape([x.shape[0], x.shape[1]//2, 2]) # (898, 50, 2)
-
-  height = 480
-  width = 640
-  mask = np.zeros((height, width, 3), np.uint8)
-  # for save
-  fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-  save = cv2.VideoWriter("test.mp4", fmt, 30, (width, height))
-
-  x_pre = x[0]  # (50, 2)
-  for t in range(x.shape[0]):
-    if t+1 == x.shape[0]:
-      break
-    img = np.zeros((height, width, 3), np.uint8)
-    x_now = x[t+1]  # (50, 2)
-    theta_now = round(theta[t, 0], 2)
-
-    for i in range(x.shape[1]):
-      mask = cv2.line(mask, (int(x_pre[i][0]), int(x_pre[i][1])), (int(x_now[i][0]), int(x_now[i][1])), [128, 128, 128], 1)
-      img = cv2.circle(img, (int(x_now[i][0]), int(x_now[i][1])), 5, [0, 0, 200], -1)
-
-    # テキストデータ描画
-    angle_data = "Wrist Angle: " + str(theta_now)
-    org = (5, 400)
-    cv2.putText(img, angle_data, org, fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=1.0, color=(255, 255, 255))
-
-    image = cv2.add(img, mask)
-    # cv2.imshow("mask", image)
-    save.write(image)
-
-    x_pre = x_now
-  
-  cv2.destroyAllWindows()
-#####################################################################
-
 ########################  HighpassFilter  ###########################
 # samplerate = 25600 # 波形のサンプリングレート
 samplerate = 30

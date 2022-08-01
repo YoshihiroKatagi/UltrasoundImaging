@@ -16,7 +16,8 @@ from pyrsistent import v
 
 ########################### ファイル ############################
 # 該当フォルダの日付（計測日と異なる場合は手入力）
-target_date = "2022-05-30"
+# target_date = "2022-05-30"
+target_date = "2022-07-26"
 # target_date = datetime.now().strftime("%Y-%m-%d")
 
 # 使用する超音波画像のファイル名一覧をリストで取得
@@ -99,6 +100,11 @@ def OpticalFlow(t_path, i_s_path, p):
   size = (width, height)  # (640, 480)
   frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # 900
   frame_rate = int(cap.get(cv2.CAP_PROP_FPS)) # 30
+
+  print("width: " + str(width) + ", height: " + str(height))
+  print("frame count: " + str(frame_count))
+  print("frame rate: " + str(frame_rate))
+  exit()
 
   # # for save
   # fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
@@ -304,12 +310,12 @@ Parameters = [0]
 # パラメータ調整用　(MakeParameters()を調整する)
 # Parameters = MakeParameters(1, 4, 1, 1)
 
-Gonio_data = ReadGonio() # (120, 898, 1)
+# Gonio_data = ReadGonio() # (120, 898, 1)
 
 # 画像ごとにOpticalFlow()を実行
 for i, id in enumerate(ImageData):
   target_image = os.path.splitext(id)[0]
-  Theta = Gonio_data[i]
+  # Theta = Gonio_data[i]
 
   target_directry = "./dataset/" + target_date + "/ultrasoundImage"
   target_path = target_directry + "/before/" + target_image + ".mp4"
